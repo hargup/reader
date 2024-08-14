@@ -1,7 +1,7 @@
 import os from 'os';
 import fs from 'fs';
 import { container, singleton } from 'tsyringe';
-import { AsyncService, Defer, marshalErrorLike, AssertionFailureError, delay, maxConcurrency, retry } from 'civkit';
+import { AsyncService, Defer, marshalErrorLike, AssertionFailureError, delay, maxConcurrency } from 'civkit';
 import { Logger } from '../shared/index';
 
 import type { Browser, CookieParam, Page } from 'puppeteer';
@@ -203,7 +203,7 @@ export class PuppeteerControl extends AsyncService {
 
     _sn = 0;
     browser!: Browser;
-    logger = new Logger('PuppeteerControl')
+    logger = new Logger('CHANGE_LOGGER_NAME')
 
     private __healthCheckInterval?: NodeJS.Timeout;
 
@@ -461,7 +461,6 @@ document.addEventListener('load', handlePageLoad);
         });
     }
 
-    @retry({ times: 3, delay: 1000 })
     async *scrap(parsedUrl: URL, options?: ScrappingOptions): AsyncGenerator<PageSnapshot | undefined> {
         // parsedUrl.search = '';
         const url = parsedUrl.toString();
@@ -469,13 +468,9 @@ document.addEventListener('load', handlePageLoad);
         let snapshot: PageSnapshot | undefined;
         let screenshot: Buffer | undefined;
         let pageshot: Buffer | undefined;
-        let page: Page | null = null;
-        let sn: number | undefined;
-
-        try {
-            page = await this.getNextPage();
-            sn = this.snMap.get(page);
-            this.logger.info(`Page ${sn}: Scraping ${url}`, { url });
+        const page = await this.getNextPage();
+        const sn = this.snMap.get(page);
+        this.logger.info(`Page ${sn}: Scraping ${url}`, { url });
         if (options?.proxyUrl) {
             await page.useProxy(options.proxyUrl);
         }
@@ -658,49 +653,39 @@ document.addEventListener('load', handlePageLoad);
                     throw error;
                 }
             }
-        } catch (error) {
-            this.logger.error(`Error scraping ${url}`, { error: marshalErrorLike(error) });
-            throw error;
         } finally {
-            if (page) {
-                (waitForPromise ? Promise.allSettled([gotoPromise, waitForPromise]) : gotoPromise).finally(() => {
-                    page!.off('snapshot', hdl);
-                    this.ditchPage(page!);
-                });
-            }
+            (waitForPromise ? Promise.allSettled([gotoPromise, waitForPromise]) : gotoPromise).finally(() => {
+                page.off('snapshot', hdl);
+                this.ditchPage(page);
+            });
             nextSnapshotDeferred.resolve();
         }
     }
 
-    private async salvage(url: string, page: Page) {
-        try {
-            this.logger.info(`Salvaging ${url}`);
-            const googleArchiveUrl = `https://webcache.googleusercontent.com/search?q=cache:${encodeURIComponent(url)}`;
-            const resp = await fetch(googleArchiveUrl, {
-                headers: {
-                    'User-Agent': `Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.0; +https://openai.com/gptbot)`
-                }
-            });
-            resp.body?.cancel().catch(() => void 0);
-            if (!resp.ok) {
-                this.logger.warn(`No salvation found for url: ${url}`, { status: resp.status, url });
-                return null;
+    async salvage(url: string, page: Page) {
+        this.logger.info(`Salvaging ${url}`);
+        const googleArchiveUrl = `https://webcache.googleusercontent.com/search?q=cache:${encodeURIComponent(url)}`;
+        const resp = await fetch(googleArchiveUrl, {
+            headers: {
+                'User-Agent': `Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.0; +https://openai.com/gptbot)`
             }
-
-            await page.goto(googleArchiveUrl, { waitUntil: ['load', 'domcontentloaded', 'networkidle0'], timeout: 15_000 }).catch((err) => {
-                this.logger.warn(`Page salvation did not fully succeed.`, { err: marshalErrorLike(err) });
-            });
-
-            this.logger.info(`Salvation completed.`);
-
-            return true;
-        } catch (error) {
-            this.logger.error(`Error during salvage operation for ${url}`, { error: marshalErrorLike(error) });
+        });
+        resp.body?.cancel().catch(() => void 0);
+        if (!resp.ok) {
+            this.logger.warn(`No salvation found for url: ${url}`, { status: resp.status, url });
             return null;
         }
+
+        await page.goto(googleArchiveUrl, { waitUntil: ['load', 'domcontentloaded', 'networkidle0'], timeout: 15_000 }).catch((err) => {
+            this.logger.warn(`Page salvation did not fully succeed.`, { err: marshalErrorLike(err) });
+        });
+
+        this.logger.info(`Salvation completed.`);
+
+        return true;
     }
 
-    private async snapshotChildFrames(page: Page): Promise<PageSnapshot[]> {
+    async snapshotChildFrames(page: Page): Promise<PageSnapshot[]> {
         const childFrames = page.mainFrame().childFrames();
         const r = await Promise.all(childFrames.map(async (x) => {
             const thisUrl = x.url();
@@ -722,4 +707,6 @@ document.addEventListener('load', handlePageLoad);
 
 }
 
-export const puppeteerControl = container.resolve(PuppeteerControl);
+const puppeteerControl = container.resolve(PuppeteerControl);
+
+export default puppeteerControl;
