@@ -1,10 +1,10 @@
 import { container, singleton } from 'tsyringe';
 import { AsyncService, marshalErrorLike } from 'civkit';
-import { Logger } from '../shared/services/logger';
+import { Logger } from '../shared/logger';
 import { ExtendedSnapshot, PageSnapshot } from './puppeteer';
 import { JSDOM, VirtualConsole } from 'jsdom';
 import { Readability } from '@mozilla/readability';
-import TurndownService from 'turndown';
+import TurndownService, { Node } from 'turndown';
 
 const virtualConsole = new VirtualConsole();
 virtualConsole.on('error', () => void 0);
@@ -87,7 +87,7 @@ export class JSDomControl extends AsyncService {
             return snapshot;
         }
         const textChunks: string[] = [];
-        let rootDoc: Document;
+        let rootDoc;
         if (allNodes.length === 1 && allNodes[0].nodeName === '#document') {
             rootDoc = allNodes[0] as any;
             if (rootDoc.body.textContent) {

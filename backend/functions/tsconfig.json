@@ -3,7 +3,7 @@
         "module": "node16",
 
         "noImplicitReturns": true,
-        "noUnusedLocals": true,
+        "noUnusedLocals": false,
         "outDir": "build",
         "sourceMap": true,
         "strict": true,
