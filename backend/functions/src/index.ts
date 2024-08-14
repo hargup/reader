@@ -7,7 +7,12 @@ import { https } from 'firebase-functions'
 
 initializeApp();
 
-export const crawler = https.onRequest(CrawlerHost);
+import { container } from 'tsyringe';
+
+const crawlerHost = container.resolve(CrawlerHost);
+export const crawler = https.onRequest(async (req, res) => {
+    await crawlerHost.crawl(req, res);
+});
 // import { loadModulesDynamically, registry } from './shared';
 // import path from 'path';
 // loadModulesDynamically(path.resolve(__dirname, 'cloud-functions'));

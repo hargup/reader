@@ -566,41 +566,11 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
         return formatted as FormattedPage;
     }
 
-    @CloudHTTPv2({
-        name: 'crawl2',
-        runtime: {
-            memory: '4GiB',
-            timeoutSeconds: 300,
-            concurrency: 22,
-        },
-        tags: ['Crawler'],
-        httpMethod: ['get', 'post'],
-        returnType: [String, OutputServerEventStream],
-        exposeRoot: true,
-    })
-    @CloudHTTPv2({
-        runtime: {
-            memory: '4GiB',
-            cpu: 4,
-            timeoutSeconds: 300,
-            concurrency: 22,
-            maxInstances: 455,
-            minInstances: 1,
-        },
-        tags: ['Crawler'],
-        httpMethod: ['get', 'post'],
-        returnType: [String, OutputServerEventStream],
-        exposeRoot: true,
-    })
-    async crawl(
-        @RPCReflect() rpcReflect: RPCReflection,
-        ctx: {
-            req: Request,
-            res: Response,
-        },
-        crawlerOptionsHeaderOnly: CrawlerOptionsHeaderOnly,
-        crawlerOptionsParamsAllowed: CrawlerOptions,
-    ) {
+    async crawl(req: Request, res: Response) {
+        const rpcReflect = new RPCReflection();
+        const ctx = { req, res };
+        const crawlerOptionsHeaderOnly = CrawlerOptionsHeaderOnly.from(req.headers);
+        const crawlerOptionsParamsAllowed = CrawlerOptions.from(req.method === 'POST' ? req.body : req.query);
         const noSlashURL = ctx.req.url.slice(1);
         const crawlerOptions = ctx.req.method === 'GET' ? crawlerOptionsHeaderOnly : crawlerOptionsParamsAllowed;
         if (!noSlashURL && !crawlerOptions.url) {
