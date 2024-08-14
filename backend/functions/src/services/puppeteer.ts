@@ -203,7 +203,7 @@ export class PuppeteerControl extends AsyncService {
 
     _sn = 0;
     browser!: Browser;
-    logger = new Logger('CHANGE_LOGGER_NAME')
+    logger = new Logger('PuppeteerControl')
 
     private __healthCheckInterval?: NodeJS.Timeout;
 
@@ -672,7 +672,7 @@ document.addEventListener('load', handlePageLoad);
         }
     }
 
-    async salvage(url: string, page: Page) {
+    private async salvage(url: string, page: Page) {
         this.logger.info(`Salvaging ${url}`);
         const googleArchiveUrl = `https://webcache.googleusercontent.com/search?q=cache:${encodeURIComponent(url)}`;
         const resp = await fetch(googleArchiveUrl, {
@@ -695,7 +695,7 @@ document.addEventListener('load', handlePageLoad);
         return true;
     }
 
-    async snapshotChildFrames(page: Page): Promise<PageSnapshot[]> {
+    private async snapshotChildFrames(page: Page): Promise<PageSnapshot[]> {
         const childFrames = page.mainFrame().childFrames();
         const r = await Promise.all(childFrames.map(async (x) => {
             const thisUrl = x.url();
@@ -717,6 +717,4 @@ document.addEventListener('load', handlePageLoad);
 
 }
 
-const puppeteerControl = container.resolve(PuppeteerControl);
-
-export default puppeteerControl;
+export const puppeteerControl = container.resolve(PuppeteerControl);
