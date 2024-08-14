@@ -3,7 +3,6 @@ import {
     RPCHost, RPCReflection,
     HashManager,
     AssertionFailureError, ParamValidationError, Defer,
-
 } from 'civkit';
 import { singleton } from 'tsyringe';
 import { AsyncContext, CloudHTTPv2, FirebaseStorageBucketControl, Logger, OutputServerEventStream, RPCReflect } from '../shared';
@@ -17,8 +16,6 @@ import { Crawled } from '../db/crawled';
 import { cleanAttribute } from '../utils/misc';
 import { randomUUID } from 'crypto';
 
-// Mock implementation of estimateToken
-const estimateToken = (text: string) => Math.ceil(text.length / 4);
 
 import { CrawlerOptions, CrawlerOptionsHeaderOnly } from '../dto/scrapping-options';
 import { PDFExtractor } from '../services/pdf-extract';
