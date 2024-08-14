@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { initializeApp } from 'firebase-admin/app';
 import { CrawlerHost } from './cloud-functions/crawler';
-import { https } from 'firebase-functions';
+import { https, HttpsFunction } from 'firebase-functions';
 import { Logger } from './shared/logger';
 import { container } from 'tsyringe';
 import { PuppeteerControl } from './services/puppeteer';
@@ -21,6 +21,10 @@ container.registerSingleton(CrawlerHost);
 const crawlerHost = container.resolve(CrawlerHost);
 export const crawler = https.onRequest(async (req, res) => {
     await crawlerHost.crawl(req, res);
+});
+
+export const helloWorld: HttpsFunction = https.onRequest((req, res) => {
+    res.send('Hello World!');
 });
 // import { loadModulesDynamically, registry } from './shared';
 // import path from 'path';
