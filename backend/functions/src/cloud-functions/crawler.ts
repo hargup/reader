@@ -603,21 +603,17 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
             req: Request,
             res: Response,
         },
-        auth: JinaEmbeddingsAuthDTO,
         crawlerOptionsHeaderOnly: CrawlerOptionsHeaderOnly,
         crawlerOptionsParamsAllowed: CrawlerOptions,
     ) {
-        const uid = await auth.solveUID();
-        let chargeAmount = 0;
         const noSlashURL = ctx.req.url.slice(1);
         const crawlerOptions = ctx.req.method === 'GET' ? crawlerOptionsHeaderOnly : crawlerOptionsParamsAllowed;
         if (!noSlashURL && !crawlerOptions.url) {
-            const latestUser = uid ? await auth.assertUser() : undefined;
             if (!ctx.req.accepts('text/plain') && (ctx.req.accepts('text/json') || ctx.req.accepts('application/json'))) {
-                return this.getIndex(latestUser);
+                return this.getIndex();
             }
 
-            return assignTransferProtocolMeta(`${this.getIndex(latestUser)}`,
+            return assignTransferProtocolMeta(`${this.getIndex()}`,
                 { contentType: 'text/plain', envelope: null }
             );
         }
@@ -656,22 +652,7 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
             });
         }
 
-        if (!uid) {
-            if (urlToCrawl.protocol === 'http:' && (!urlToCrawl.pathname || urlToCrawl.pathname === '/') &&
-                crawlerOptions.respondWith !== 'default') {
-                throw new Error(`Your request is categorized as abuse. Please don't abuse our service. If you are sure you are not abusing, please authenticate yourself with an API key.`);
-            }
-            const blockade = (await DomainBlockade.fromFirestoreQuery(
-                DomainBlockade.COLLECTION
-                    .where('domain', '==', urlToCrawl.hostname.toLowerCase())
-                    .where('expireAt', '>=', new Date())
-                    .limit(1)
-            ))[0];
-            if (blockade) {
-                throw new Error(`Domain ${urlToCrawl.hostname} blocked until ${blockade.expireAt || 'Eternally'} due to previous abuse found on ${blockade.triggerUrl || 'site'}: ${blockade.triggerReason}`);
-            }
-
-        }
+        // Remove auth check
         const crawlOpts = this.configure(crawlerOptions);
 
 
