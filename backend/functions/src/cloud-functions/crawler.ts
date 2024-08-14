@@ -3,10 +3,10 @@ import {
     RPCHost, RPCReflection,
     HashManager,
     AssertionFailureError, ParamValidationError, Defer,
-    SecurityCompromiseError
+
 } from 'civkit';
 import { singleton } from 'tsyringe';
-import { AsyncContext, CloudHTTPv2, Ctx, FirebaseStorageBucketControl, Logger, OutputServerEventStream, RPCReflect, SecurityCompromiseError } from '../shared';
+import { AsyncContext, CloudHTTPv2, Ctx, FirebaseStorageBucketControl, Logger, OutputServerEventStream, RPCReflect } from '../shared';
 import _ from 'lodash';
 import { PageSnapshot, PuppeteerControl, ScrappingOptions } from '../services/puppeteer';
 import { Request, Response } from 'express';
@@ -660,7 +660,7 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
         if (!uid) {
             if (urlToCrawl.protocol === 'http:' && (!urlToCrawl.pathname || urlToCrawl.pathname === '/') &&
                 crawlerOptions.respondWith !== 'default') {
-                throw new SecurityCompromiseError(`Your request is categorized as abuse. Please don't abuse our service. If you are sure you are not abusing, please authenticate yourself with an API key.`);
+                throw new Error(`Your request is categorized as abuse. Please don't abuse our service. If you are sure you are not abusing, please authenticate yourself with an API key.`);
             }
             const blockade = (await DomainBlockade.fromFirestoreQuery(
                 DomainBlockade.COLLECTION
@@ -669,7 +669,7 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
                     .limit(1)
             ))[0];
             if (blockade) {
-                throw new SecurityCompromiseError(`Domain ${urlToCrawl.hostname} blocked until ${blockade.expireAt || 'Eternally'} due to previous abuse found on ${blockade.triggerUrl || 'site'}: ${blockade.triggerReason}`);
+                throw new Error(`Domain ${urlToCrawl.hostname} blocked until ${blockade.expireAt || 'Eternally'} due to previous abuse found on ${blockade.triggerUrl || 'site'}: ${blockade.triggerReason}`);
             }
 
         }
@@ -940,7 +940,7 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
 
             yield* this.puppeteerControl.scrap(urlToCrawl, crawlOpts);
         } catch (err: any) {
-            if (cache && !(err instanceof SecurityCompromiseError)) {
+            if (cache && !(err instanceof Error)) {
                 this.logger.warn(`Failed to scrap ${urlToCrawl}, but a stale cache is available. Falling back to cache`, { err: marshalErrorLike(err) });
                 yield this.jsdomControl.narrowSnapshot(cache.snapshot, crawlOpts);
                 return;
