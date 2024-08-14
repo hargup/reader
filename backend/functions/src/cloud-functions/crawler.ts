@@ -512,13 +512,13 @@ export class CrawlerHost extends RPCHost {
                     return this.content as string;
                 }
 
-                const mixins = [];
+                const mixins: string[] = [];
                 if (this.publishedTime) {
                     mixins.push(`Published Time: ${this.publishedTime}`);
                 }
-                const suffixMixins = [];
+                const suffixMixins: string[] = [];
                 if (this.images) {
-                    const imageSummaryChunks = ['Images:'];
+                    const imageSummaryChunks: string[] = ['Images:'];
                     for (const [k, v] of Object.entries(this.images)) {
                         imageSummaryChunks.push(`- ![${k}](${v})`);
                     }
