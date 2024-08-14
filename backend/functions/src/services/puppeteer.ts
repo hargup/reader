@@ -1,7 +1,7 @@
 import os from 'os';
 import fs from 'fs';
 import { container, singleton } from 'tsyringe';
-import { AsyncService, Defer, marshalErrorLike, AssertionFailureError, delay, maxConcurrency } from 'civkit';
+import { AsyncService, Defer, marshalErrorLike, AssertionFailureError, delay, maxConcurrency, retry } from 'civkit';
 import { Logger } from '../shared/index';
 
 import type { Browser, CookieParam, Page } from 'puppeteer';
@@ -461,6 +461,7 @@ document.addEventListener('load', handlePageLoad);
         });
     }
 
+    @retry({ times: 3, delay: 1000 })
     async *scrap(parsedUrl: URL, options?: ScrappingOptions): AsyncGenerator<PageSnapshot | undefined> {
         // parsedUrl.search = '';
         const url = parsedUrl.toString();
@@ -468,9 +469,13 @@ document.addEventListener('load', handlePageLoad);
         let snapshot: PageSnapshot | undefined;
         let screenshot: Buffer | undefined;
         let pageshot: Buffer | undefined;
-        const page = await this.getNextPage();
-        const sn = this.snMap.get(page);
-        this.logger.info(`Page ${sn}: Scraping ${url}`, { url });
+        let page: Page | null = null;
+        let sn: number | undefined;
+
+        try {
+            page = await this.getNextPage();
+            sn = this.snMap.get(page);
+            this.logger.info(`Page ${sn}: Scraping ${url}`, { url });
         if (options?.proxyUrl) {
             await page.useProxy(options.proxyUrl);
         }
@@ -653,11 +658,16 @@ document.addEventListener('load', handlePageLoad);
                     throw error;
                 }
             }
+        } catch (error) {
+            this.logger.error(`Error scraping ${url}`, { error: marshalErrorLike(error) });
+            throw error;
         } finally {
-            (waitForPromise ? Promise.allSettled([gotoPromise, waitForPromise]) : gotoPromise).finally(() => {
-                page.off('snapshot', hdl);
-                this.ditchPage(page);
-            });
+            if (page) {
+                (waitForPromise ? Promise.allSettled([gotoPromise, waitForPromise]) : gotoPromise).finally(() => {
+                    page!.off('snapshot', hdl);
+                    this.ditchPage(page!);
+                });
+            }
             nextSnapshotDeferred.resolve();
         }
     }

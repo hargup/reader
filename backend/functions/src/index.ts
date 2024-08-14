@@ -35,10 +35,13 @@ export const crawler = https.onRequest(async (req, res) => {
 // registry.title = 'reader';
 // registry.version = '0.1.0';
 
-process.on('unhandledRejection', (_err) => `Somehow is false alarm in firebase`);
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    // Application specific logging, throwing an error, or other logic here
+});
 
 process.on('uncaughtException', (err) => {
-    console.log('Uncaught exception', err);
+    console.error('Uncaught Exception:', err);
 
     // Looks like Firebase runtime does not handle error properly.
     // Make sure to quit the process.
