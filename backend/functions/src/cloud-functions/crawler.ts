@@ -5,8 +5,7 @@ import {
     AssertionFailureError, ParamValidationError, Defer,
 } from 'civkit';
 import { singleton } from 'tsyringe';
-import { AsyncContext, CloudHTTPv2, Ctx, FirebaseStorageBucketControl, InsufficientBalanceError, Logger, OutputServerEventStream, RPCReflect, SecurityCompromiseError } from '../shared';
-import { RateLimitControl, RateLimitDesc } from '../shared/services/rate-limit';
+import { AsyncContext, CloudHTTPv2, Ctx, FirebaseStorageBucketControl, Logger, OutputServerEventStream, RPCReflect, SecurityCompromiseError } from '../shared';
 import _ from 'lodash';
 import { PageSnapshot, PuppeteerControl, ScrappingOptions } from '../services/puppeteer';
 import { Request, Response } from 'express';
@@ -16,11 +15,10 @@ import TurndownService from 'turndown';
 import { Crawled } from '../db/crawled';
 import { cleanAttribute } from '../utils/misc';
 import { randomUUID } from 'crypto';
-import { JinaEmbeddingsAuthDTO } from '../shared/dto/jina-embeddings-auth';
 
 import { countGPTToken as estimateToken } from '../shared/utils/openai';
+
 import { CrawlerOptions, CrawlerOptionsHeaderOnly } from '../dto/scrapping-options';
-import { JinaEmbeddingsTokenAccount } from '../shared/db/jina-embeddings-token-account';
 import { PDFExtractor } from '../services/pdf-extract';
 import { DomainBlockade } from '../db/domain-blockade';
 import { FirebaseRoundTripChecker } from '../shared/services/firebase-roundtrip-checker';
@@ -81,7 +79,6 @@ export class CrawlerHost extends RPCHost {
         protected altTextService: AltTextService,
         protected pdfExtractor: PDFExtractor,
         protected firebaseObjectStorage: FirebaseStorageBucketControl,
-        protected rateLimitControl: RateLimitControl,
         protected threadLocal: AsyncContext,
         protected fbHealthCheck: FirebaseRoundTripChecker,
     ) {
@@ -121,7 +118,7 @@ export class CrawlerHost extends RPCHost {
         this.emit('ready');
     }
 
-    getIndex(user?: JinaEmbeddingsTokenAccount) {
+    getIndex() {
         const indexObject: Record<string, string | number | undefined> = Object.create(indexProto);
 
         Object.assign(indexObject, {
@@ -130,12 +127,6 @@ export class CrawlerHost extends RPCHost {
             homepage: 'https://jina.ai/reader',
             sourceCode: 'https://github.com/jina-ai/reader',
         });
-
-        if (user) {
-            indexObject[''] = undefined;
-            indexObject.authenticatedAs = `${user.user_id} (${user.full_name})`;
-            indexObject.balanceLeft = user.wallet.total_balance;
-        }
 
         return indexObject;
     }
@@ -375,7 +366,6 @@ export class CrawlerHost extends RPCHost {
         let contentText = '';
         const imageSummary = {} as { [k: string]: string; };
         const imageIdxTrack = new Map<string, number[]>();
-        const uid = this.threadLocal.get('uid');
         do {
             if (pdfMode) {
                 contentText = snapshot.parsed?.content || snapshot.text;
@@ -384,7 +374,6 @@ export class CrawlerHost extends RPCHost {
 
             if (
                 snapshot.maxElemDepth! > 256 ||
-                (!uid && snapshot.elemCount! > 10_000) ||
                 snapshot.elemCount! > 70_000
             ) {
                 this.logger.warn('Degrading to text to protect the server', { url: snapshot.href });
