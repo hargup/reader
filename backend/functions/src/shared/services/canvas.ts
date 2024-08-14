@@ -4,9 +4,9 @@ import { Logger } from '../logger';
 
 @singleton()
 export class CanvasService extends AsyncService {
-    logger = this.globalLogger.child({ service: this.constructor.name });
+    logger = new Logger('CHANGE_LOGGER_NAME')
 
-    constructor(protected globalLogger: Logger) {
+    constructor() {
         super();
     }
 

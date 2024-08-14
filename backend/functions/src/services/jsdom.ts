@@ -1,6 +1,6 @@
 import { container, singleton } from 'tsyringe';
 import { AsyncService, marshalErrorLike } from 'civkit';
-import { Logger } from '../shared/logger';
+import { Logger } from '../shared/index';
 import { ExtendedSnapshot, PageSnapshot } from './puppeteer';
 import { JSDOM, VirtualConsole } from 'jsdom';
 import { Readability } from '@mozilla/readability';
@@ -12,10 +12,9 @@ virtualConsole.on('error', () => void 0);
 @singleton()
 export class JSDomControl extends AsyncService {
 
-    logger = this.globalLogger.child({ service: this.constructor.name });
+    logger = new Logger('CHANGE_LOGGER_NAME')
 
     constructor(
-        protected globalLogger: Logger,
     ) {
         super(...arguments);
     }

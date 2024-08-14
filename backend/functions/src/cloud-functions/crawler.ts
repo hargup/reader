@@ -5,7 +5,7 @@ import {
     AssertionFailureError, ParamValidationError, Defer,
 } from 'civkit';
 import { singleton } from 'tsyringe';
-import { AsyncContext, CloudHTTPv2, FirebaseStorageBucketControl, Logger, OutputServerEventStream, RPCReflect } from '../shared';
+import { AsyncContext, CloudHTTPv2, FirebaseStorageBucketControl, Logger, OutputServerEventStream, RPCReflect } from '../shared/index';
 import _ from 'lodash';
 import { PageSnapshot, PuppeteerControl, ScrappingOptions } from '../services/puppeteer';
 import { Request, Response } from 'express';
@@ -23,6 +23,8 @@ import { DomainBlockade } from '../db/domain-blockade';
 import { JSDomControl } from '../services/jsdom';
 
 const md5Hasher = new HashManager('md5', 'hex');
+
+// const logger = new Logger('Crawler');
 
 export interface ExtraScrappingOptions extends ScrappingOptions {
     withIframe?: boolean;
@@ -61,7 +63,7 @@ const indexProto = {
 
 @singleton()
 export class CrawlerHost extends RPCHost {
-    logger = this.globalLogger.child({ service: this.constructor.name });
+    logger = new Logger('Crawler');
 
     turnDownPlugins = [require('turndown-plugin-gfm').tables];
 
@@ -71,7 +73,6 @@ export class CrawlerHost extends RPCHost {
     abuseBlockMs = 1000 * 3600;
 
     constructor(
-        protected globalLogger: Logger,
         protected puppeteerControl: PuppeteerControl,
         protected jsdomControl: JSDomControl,
         // protected altTextService: AltTextService,

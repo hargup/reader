@@ -2,7 +2,7 @@ import os from 'os';
 import fs from 'fs';
 import { container, singleton } from 'tsyringe';
 import { AsyncService, Defer, marshalErrorLike, AssertionFailureError, delay, maxConcurrency } from 'civkit';
-import { Logger } from '../shared/logger';
+import { Logger } from '../shared/index';
 
 import type { Browser, CookieParam, Page } from 'puppeteer';
 import puppeteer from 'puppeteer-extra';
@@ -11,7 +11,7 @@ import puppeteerBlockResources from 'puppeteer-extra-plugin-block-resources';
 import puppeteerPageProxy from 'puppeteer-extra-plugin-page-proxy';
 import { SecurityCompromiseError, ServiceCrashedError } from '../shared/errors';
 import { TimeoutError } from 'puppeteer';
-const tldExtract = require('tld-extract');
+import tldExtract from 'tld-extract';
 
 const READABILITY_JS = fs.readFileSync(require.resolve('@mozilla/readability/Readability.js'), 'utf-8');
 
@@ -203,7 +203,7 @@ export class PuppeteerControl extends AsyncService {
 
     _sn = 0;
     browser!: Browser;
-    logger = this.globalLogger.child({ service: this.constructor.name });
+    logger = new Logger('CHANGE_LOGGER_NAME')
 
     private __healthCheckInterval?: NodeJS.Timeout;
 
@@ -217,7 +217,6 @@ export class PuppeteerControl extends AsyncService {
     circuitBreakerHosts: Set<string> = new Set();
 
     constructor(
-        protected globalLogger: Logger,
     ) {
         super(...arguments);
         this.setMaxListeners(2 * Math.floor(os.totalmem() / (256 * 1024 * 1024)) + 1); 148 - 95;

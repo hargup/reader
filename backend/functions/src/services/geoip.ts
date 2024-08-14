@@ -2,7 +2,7 @@ import { container, singleton } from 'tsyringe';
 import fsp from 'fs/promises';
 import { CityResponse, Reader } from 'maxmind';
 import { AsyncService, AutoCastable, Prop, runOnce } from 'civkit';
-import { Logger } from '../shared';
+import { Logger } from '../shared/index';
 import path from 'path';
 
 export enum GEOIP_SUPPORTED_LANGUAGES {
@@ -56,12 +56,11 @@ export class GeoIPCityResponse extends AutoCastable {
 @singleton()
 export class GeoIPService extends AsyncService {
 
-    logger = this.globalLogger.child({ service: this.constructor.name });
+    logger = new Logger('CHANGE_LOGGER_NAME')
 
     mmdbCity!: Reader<CityResponse>;
 
     constructor(
-        protected globalLogger: Logger,
     ) {
         super(...arguments);
     }
