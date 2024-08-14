@@ -673,26 +673,31 @@ document.addEventListener('load', handlePageLoad);
     }
 
     private async salvage(url: string, page: Page) {
-        this.logger.info(`Salvaging ${url}`);
-        const googleArchiveUrl = `https://webcache.googleusercontent.com/search?q=cache:${encodeURIComponent(url)}`;
-        const resp = await fetch(googleArchiveUrl, {
-            headers: {
-                'User-Agent': `Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.0; +https://openai.com/gptbot)`
+        try {
+            this.logger.info(`Salvaging ${url}`);
+            const googleArchiveUrl = `https://webcache.googleusercontent.com/search?q=cache:${encodeURIComponent(url)}`;
+            const resp = await fetch(googleArchiveUrl, {
+                headers: {
+                    'User-Agent': `Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.0; +https://openai.com/gptbot)`
+                }
+            });
+            resp.body?.cancel().catch(() => void 0);
+            if (!resp.ok) {
+                this.logger.warn(`No salvation found for url: ${url}`, { status: resp.status, url });
+                return null;
             }
-        });
-        resp.body?.cancel().catch(() => void 0);
-        if (!resp.ok) {
-            this.logger.warn(`No salvation found for url: ${url}`, { status: resp.status, url });
+
+            await page.goto(googleArchiveUrl, { waitUntil: ['load', 'domcontentloaded', 'networkidle0'], timeout: 15_000 }).catch((err) => {
+                this.logger.warn(`Page salvation did not fully succeed.`, { err: marshalErrorLike(err) });
+            });
+
+            this.logger.info(`Salvation completed.`);
+
+            return true;
+        } catch (error) {
+            this.logger.error(`Error during salvage operation for ${url}`, { error: marshalErrorLike(error) });
             return null;
         }
-
-        await page.goto(googleArchiveUrl, { waitUntil: ['load', 'domcontentloaded', 'networkidle0'], timeout: 15_000 }).catch((err) => {
-            this.logger.warn(`Page salvation did not fully succeed.`, { err: marshalErrorLike(err) });
-        });
-
-        this.logger.info(`Salvation completed.`);
-
-        return true;
     }
 
     private async snapshotChildFrames(page: Page): Promise<PageSnapshot[]> {
