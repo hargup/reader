@@ -17,7 +17,8 @@ import { Crawled } from '../db/crawled';
 import { cleanAttribute } from '../utils/misc';
 import { randomUUID } from 'crypto';
 
-import { countGPTToken as estimateToken } from '../shared/utils/openai';
+// Mock implementation of estimateToken
+const estimateToken = (text: string) => Math.ceil(text.length / 4);
 
 import { CrawlerOptions, CrawlerOptionsHeaderOnly } from '../dto/scrapping-options';
 import { PDFExtractor } from '../services/pdf-extract';
