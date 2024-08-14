@@ -18,7 +18,7 @@ import { randomUUID } from 'crypto';
 
 
 import { CrawlerOptions, CrawlerOptionsHeaderOnly } from '../dto/scrapping-options';
-import { PDFExtractor } from '../services/pdf-extract';
+// import { PDFExtractor } from '../services/pdf-extract';
 import { DomainBlockade } from '../db/domain-blockade';
 import { JSDomControl } from '../services/jsdom';
 
@@ -75,7 +75,7 @@ export class CrawlerHost extends RPCHost {
         protected puppeteerControl: PuppeteerControl,
         protected jsdomControl: JSDomControl,
         protected altTextService: AltTextService,
-        protected pdfExtractor: PDFExtractor,
+        // protected pdfExtractor: PDFExtractor,
         protected firebaseObjectStorage: FirebaseStorageBucketControl,
         protected threadLocal: AsyncContext,
     ) {
@@ -327,25 +327,25 @@ export class CrawlerHost extends RPCHost {
         }
 
         let pdfMode = false;
-        if (snapshot.pdfs?.length && !snapshot.title) {
-            const pdf = await this.pdfExtractor.cachedExtract(snapshot.pdfs[0],
-                this.threadLocal.get('cacheTolerance')
-            );
-            if (pdf) {
-                pdfMode = true;
-                snapshot.title = pdf.meta?.Title;
-                snapshot.text = pdf.text || snapshot.text;
-                snapshot.parsed = {
-                    content: pdf.content,
-                    textContent: pdf.content,
-                    length: pdf.content?.length,
-                    byline: pdf.meta?.Author,
-                    lang: pdf.meta?.Language || undefined,
-                    title: pdf.meta?.Title,
-                    publishedTime: this.pdfExtractor.parsePdfDate(pdf.meta?.ModDate || pdf.meta?.CreationDate)?.toISOString(),
-                };
-            }
-        }
+        // if (snapshot.pdfs?.length && !snapshot.title) {
+        //     const pdf = await this.pdfExtractor.cachedExtract(snapshot.pdfs[0],
+        //         this.threadLocal.get('cacheTolerance')
+        //     );
+        //     if (pdf) {
+        //         pdfMode = true;
+        //         snapshot.title = pdf.meta?.Title;
+        //         snapshot.text = pdf.text || snapshot.text;
+        //         snapshot.parsed = {
+        //             content: pdf.content,
+        //             textContent: pdf.content,
+        //             length: pdf.content?.length,
+        //             byline: pdf.meta?.Author,
+        //             lang: pdf.meta?.Language || undefined,
+        //             title: pdf.meta?.Title,
+        //             publishedTime: this.pdfExtractor.parsePdfDate(pdf.meta?.ModDate || pdf.meta?.CreationDate)?.toISOString(),
+        //         };
+        //     }
+        // }
 
         if (mode === 'text') {
             return {

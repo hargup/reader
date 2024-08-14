@@ -304,7 +304,7 @@ export class PuppeteerControl extends AsyncService {
         const dedicatedContext = await this.browser.createBrowserContext();
         const sn = this._sn++;
         const page = await dedicatedContext.newPage();
-        const preparations = [];
+        const preparations: any[] = [];
 
         // preparations.push(page.setUserAgent(`Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)`));
         // preparations.push(page.setUserAgent(`Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.0; +https://openai.com/gptbot)`));
