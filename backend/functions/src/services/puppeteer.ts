@@ -672,7 +672,7 @@ document.addEventListener('load', handlePageLoad);
         }
     }
 
-    private async salvage(url: string, page: Page) {
+    async salvage(url: string, page: Page) {
         this.logger.info(`Salvaging ${url}`);
         const googleArchiveUrl = `https://webcache.googleusercontent.com/search?q=cache:${encodeURIComponent(url)}`;
         const resp = await fetch(googleArchiveUrl, {
