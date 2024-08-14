@@ -2,14 +2,14 @@ import os from 'os';
 import fs from 'fs';
 import { container, singleton } from 'tsyringe';
 import { AsyncService, Defer, marshalErrorLike, AssertionFailureError, delay, maxConcurrency } from 'civkit';
-import { Logger } from '../shared/services/logger';
+import { Logger } from '../shared/logger';
 
 import type { Browser, CookieParam, Page } from 'puppeteer';
 import puppeteer from 'puppeteer-extra';
 
 import puppeteerBlockResources from 'puppeteer-extra-plugin-block-resources';
 import puppeteerPageProxy from 'puppeteer-extra-plugin-page-proxy';
-import { SecurityCompromiseError, ServiceCrashedError } from '../shared/lib/errors';
+import { SecurityCompromiseError, ServiceCrashedError } from '../shared/errors';
 import { TimeoutError } from 'puppeteer';
 const tldExtract = require('tld-extract');
 

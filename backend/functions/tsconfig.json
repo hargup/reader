@@ -15,6 +15,7 @@
         "experimentalDecorators": true,
         "emitDecoratorMetadata": true,
         "esModuleInterop": true,
+        "noImplicitAny": false,
         "noImplicitOverride": true,
     },
     "compileOnSave": true,

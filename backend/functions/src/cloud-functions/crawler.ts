@@ -567,7 +567,7 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
     }
 
     async crawl(req: Request, res: Response) {
-        const rpcReflect: RPCReflection = {};
+        // const rpcReflect: RPCReflection = {};
         const ctx = { req, res };
         const crawlerOptionsHeaderOnly = CrawlerOptionsHeaderOnly.from(req.headers);
         const crawlerOptionsParamsAllowed = CrawlerOptions.from(req.method === 'POST' ? req.body : req.query);
@@ -619,7 +619,7 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
 
         if (!ctx.req.accepts('text/plain') && ctx.req.accepts('text/event-stream')) {
             const sseStream = new OutputServerEventStream();
-            rpcReflect.return(sseStream);
+            // rpcReflect.return(sseStream);
 
             try {
                 for await (const scrapped of this.scrap(urlToCrawl, crawlOpts, crawlerOptions)) {
