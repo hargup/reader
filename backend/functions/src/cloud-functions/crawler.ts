@@ -3,6 +3,7 @@ import {
     RPCHost, RPCReflection,
     HashManager,
     AssertionFailureError, ParamValidationError, Defer,
+    SecurityCompromiseError
 } from 'civkit';
 import { singleton } from 'tsyringe';
 import { AsyncContext, CloudHTTPv2, Ctx, FirebaseStorageBucketControl, Logger, OutputServerEventStream, RPCReflect, SecurityCompromiseError } from '../shared';
@@ -627,53 +628,7 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
             ctx.req.hostname.toLowerCase()
         );
 
-        if (uid) {
-            const user = await auth.assertUser();
-            if (!(user.wallet.total_balance > 0)) {
-                throw new InsufficientBalanceError(`Account balance not enough to run this query, please recharge.`);
-            }
-
-            const rateLimitPolicy = auth.getRateLimits(rpcReflect.name.toUpperCase()) || [
-                parseInt(user.metadata?.speed_level) >= 2 ?
-                    RateLimitDesc.from({
-                        occurrence: 1000,
-                        periodSeconds: 60
-                    }) :
-                    RateLimitDesc.from({
-                        occurrence: 200,
-                        periodSeconds: 60
-                    })
-            ];
-
-            const apiRoll = await this.rateLimitControl.simpleRPCUidBasedLimit(
-                rpcReflect, uid, [rpcReflect.name.toUpperCase()],
-                ...rateLimitPolicy
-            );
-
-            rpcReflect.finally(() => {
-                if (chargeAmount) {
-                    auth.reportUsage(chargeAmount, `reader-${rpcReflect.name}`).catch((err) => {
-                        this.logger.warn(`Unable to report usage for ${uid}`, { err: marshalErrorLike(err) });
-                    });
-                    apiRoll.chargeAmount = chargeAmount;
-                }
-            });
-        } else if (ctx.req.ip) {
-            const apiRoll = await this.rateLimitControl.simpleRpcIPBasedLimit(rpcReflect, ctx.req.ip, [rpcReflect.name.toUpperCase()],
-                [
-                    // 20 requests per minute
-                    new Date(Date.now() - 60 * 1000), 20
-                ]
-            );
-
-            rpcReflect.finally(() => {
-                if (chargeAmount) {
-                    apiRoll._ref?.set({
-                        chargeAmount,
-                    }, { merge: true }).catch((err) => this.logger.warn(`Failed to log charge amount in apiRoll`, { err }));
-                }
-            });
-        }
+        // Rate limiting code removed
 
         let urlToCrawl;
         const normalizeUrl = (await pNormalizeUrl).default;
