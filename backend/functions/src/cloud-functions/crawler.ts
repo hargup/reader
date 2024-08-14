@@ -6,7 +6,7 @@ import {
 
 } from 'civkit';
 import { singleton } from 'tsyringe';
-import { AsyncContext, CloudHTTPv2, Ctx, FirebaseStorageBucketControl, Logger, OutputServerEventStream, RPCReflect } from '../shared';
+import { AsyncContext, CloudHTTPv2, FirebaseStorageBucketControl, Logger, OutputServerEventStream, RPCReflect } from '../shared';
 import _ from 'lodash';
 import { PageSnapshot, PuppeteerControl, ScrappingOptions } from '../services/puppeteer';
 import { Request, Response } from 'express';
@@ -23,7 +23,6 @@ const estimateToken = (text: string) => Math.ceil(text.length / 4);
 import { CrawlerOptions, CrawlerOptionsHeaderOnly } from '../dto/scrapping-options';
 import { PDFExtractor } from '../services/pdf-extract';
 import { DomainBlockade } from '../db/domain-blockade';
-import { FirebaseRoundTripChecker } from '../shared/services/firebase-roundtrip-checker';
 import { JSDomControl } from '../services/jsdom';
 
 const md5Hasher = new HashManager('md5', 'hex');
@@ -82,7 +81,6 @@ export class CrawlerHost extends RPCHost {
         protected pdfExtractor: PDFExtractor,
         protected firebaseObjectStorage: FirebaseStorageBucketControl,
         protected threadLocal: AsyncContext,
-        protected fbHealthCheck: FirebaseRoundTripChecker,
     ) {
         super(...arguments);
 
