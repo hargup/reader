@@ -567,7 +567,7 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
     }
 
     async crawl(req: Request, res: Response) {
-        const rpcReflect = new RPCReflection();
+        const rpcReflect: RPCReflection = {};
         const ctx = { req, res };
         const crawlerOptionsHeaderOnly = CrawlerOptionsHeaderOnly.from(req.headers);
         const crawlerOptionsParamsAllowed = CrawlerOptions.from(req.method === 'POST' ? req.body : req.query);
