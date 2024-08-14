@@ -3,30 +3,37 @@ import { Ctx } from './types';
 import { Logger } from './logger';
 import { OutputServerEventStream } from './output-stream';
 import { RPCReflect } from './rpc-reflect';
+import { injectable } from 'tsyringe';
 
-// Mock implementations
-class AsyncContext {
-    // Add necessary methods based on usage in the codebase
-    set(key: string, value: any) {}
-    get(key: string): any { return null; }
+@injectable()
+export class AsyncContext {
+    private storage: Map<string, any> = new Map();
+
+    set(key: string, value: any) {
+        this.storage.set(key, value);
+    }
+
+    get(key: string): any {
+        return this.storage.get(key);
+    }
 }
 
-class InsufficientBalanceError extends Error {
+export class InsufficientBalanceError extends Error {
     constructor(message: string) {
         super(message);
         this.name = 'InsufficientBalanceError';
     }
 }
 
-function Param(name: string, options?: any): ParameterDecorator {
+export function Param(name: string, options?: any): ParameterDecorator {
     return (target: Object, propertyKey: string | symbol | undefined, parameterIndex: number) => {
         // Implementation details would go here
     };
 }
 
-// DONE
-class FirebaseStorageBucketControl {
-    bucket: any; // Added bucket property
+@injectable()
+export class FirebaseStorageBucketControl {
+    bucket: any;
 
     constructor() {
         this.bucket = {
@@ -70,10 +77,6 @@ export {
     Logger,
     OutputServerEventStream,
     RPCReflect,
-    AsyncContext,
-    InsufficientBalanceError,
-    Param,
-    FirebaseStorageBucketControl,
 };
 
 export const loadModulesDynamically = (path: string) => {

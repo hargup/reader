@@ -1,15 +1,22 @@
 import 'reflect-metadata';
-// import './shared/lib/doom-domain';
 import { initializeApp } from 'firebase-admin/app';
 import { CrawlerHost } from './cloud-functions/crawler';
-// import { functions } from 'firebase-admin/functions';
-import { https } from 'firebase-functions'
+import { https } from 'firebase-functions';
 import { Logger } from './shared/logger';
 import { container } from 'tsyringe';
+import { PuppeteerControl } from './services/puppeteer';
+import { JSDomControl } from './services/jsdom';
+import { FirebaseStorageBucketControl } from './shared';
+import { AsyncContext } from './shared';
 
 initializeApp();
 
 container.registerSingleton(Logger);
+container.registerSingleton(PuppeteerControl);
+container.registerSingleton(JSDomControl);
+container.registerSingleton(FirebaseStorageBucketControl);
+container.registerSingleton(AsyncContext);
+container.registerSingleton(CrawlerHost);
 
 const crawlerHost = container.resolve(CrawlerHost);
 export const crawler = https.onRequest(async (req, res) => {
