@@ -4,10 +4,12 @@ import { initializeApp } from 'firebase-admin/app';
 import { CrawlerHost } from './cloud-functions/crawler';
 // import { functions } from 'firebase-admin/functions';
 import { https } from 'firebase-functions'
+import { Logger } from './shared/logger';
+import { container } from 'tsyringe';
 
 initializeApp();
 
-import { container } from 'tsyringe';
+container.registerSingleton(Logger);
 
 const crawlerHost = container.resolve(CrawlerHost);
 export const crawler = https.onRequest(async (req, res) => {
