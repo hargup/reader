@@ -12,7 +12,7 @@ import { Request, Response } from 'express';
 const pNormalizeUrl = import("@esm2cjs/normalize-url");
 import { AltTextService } from '../services/alt-text';
 import TurndownService from 'turndown';
-import { Crawled } from '../db/crawled';
+// import { Crawled } from '../db/crawled';
 import { cleanAttribute } from '../utils/misc';
 import { randomUUID } from 'crypto';
 
@@ -89,8 +89,6 @@ export class CrawlerHost extends RPCHost {
                 // Potential privacy issue, dont cache if cookies are used
                 return;
             }
-
-            await this.setToCache(options.url, snapshot);
         });
 
         puppeteerControl.on('abuse', async (abuseEvent: { url: URL; reason: string, sn: number; }) => {
@@ -596,7 +594,7 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
     })
     async crawl(
         @RPCReflect() rpcReflect: RPCReflection,
-        @Ctx() ctx: {
+        ctx: {
             req: Request,
             res: Response,
         },
@@ -619,8 +617,6 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
         this.puppeteerControl.circuitBreakerHosts.add(
             ctx.req.hostname.toLowerCase()
         );
-
-        // Rate limiting code removed
 
         let urlToCrawl;
         const normalizeUrl = (await pNormalizeUrl).default;
@@ -649,16 +645,14 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
             });
         }
 
-        // Remove auth check
         const crawlOpts = this.configure(crawlerOptions);
-
 
         if (!ctx.req.accepts('text/plain') && ctx.req.accepts('text/event-stream')) {
             const sseStream = new OutputServerEventStream();
             rpcReflect.return(sseStream);
 
             try {
-                for await (const scrapped of this.cachedScrap(urlToCrawl, crawlOpts, crawlerOptions)) {
+                for await (const scrapped of this.scrap(urlToCrawl, crawlOpts, crawlerOptions)) {
                     if (!scrapped) {
                         continue;
                     }
@@ -684,7 +678,7 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
 
         let lastScrapped;
         if (!ctx.req.accepts('text/plain') && (ctx.req.accepts('text/json') || ctx.req.accepts('application/json'))) {
-            for await (const scrapped of this.cachedScrap(urlToCrawl, crawlOpts, crawlerOptions)) {
+            for await (const scrapped of this.scrap(urlToCrawl, crawlOpts, crawlerOptions)) {
                 lastScrapped = scrapped;
                 if (crawlerOptions.waitForSelector || ((!scrapped?.parsed?.content || !scrapped.title?.trim()) && !scrapped?.pdfs?.length)) {
                     continue;
@@ -706,7 +700,7 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
             return formatted;
         }
 
-        for await (const scrapped of this.cachedScrap(urlToCrawl, crawlOpts, crawlerOptions)) {
+        for await (const scrapped of this.scrap(urlToCrawl, crawlOpts, crawlerOptions)) {
             lastScrapped = scrapped;
             if (crawlerOptions.waitForSelector || ((!scrapped?.parsed?.content || !scrapped.title?.trim()) && !scrapped?.pdfs?.length)) {
                 continue;
@@ -716,13 +710,11 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
 
             if (crawlerOptions.timeout === undefined) {
                 if (crawlerOptions.respondWith === 'screenshot' && Reflect.get(formatted, 'screenshotUrl')) {
-
                     return assignTransferProtocolMeta(`${formatted}`,
                         { code: 302, envelope: null, headers: { Location: Reflect.get(formatted, 'screenshotUrl') } }
                     );
                 }
                 if (crawlerOptions.respondWith === 'pageshot' && Reflect.get(formatted, 'pageshotUrl')) {
-
                     return assignTransferProtocolMeta(`${formatted}`,
                         { code: 302, envelope: null, headers: { Location: Reflect.get(formatted, 'pageshotUrl') } }
                     );
@@ -738,13 +730,11 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
 
         const formatted = await this.formatSnapshot(crawlerOptions.respondWith, lastScrapped, urlToCrawl);
         if (crawlerOptions.respondWith === 'screenshot' && Reflect.get(formatted, 'screenshotUrl')) {
-
             return assignTransferProtocolMeta(`${formatted}`,
                 { code: 302, envelope: null, headers: { Location: Reflect.get(formatted, 'screenshotUrl') } }
             );
         }
         if (crawlerOptions.respondWith === 'pageshot' && Reflect.get(formatted, 'pageshotUrl')) {
-
             return assignTransferProtocolMeta(`${formatted}`,
                 { code: 302, envelope: null, headers: { Location: Reflect.get(formatted, 'pageshotUrl') } }
             );
@@ -762,117 +752,6 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
         const digest = md5Hasher.hash(normalizedUrl.toString());
 
         return digest;
-    }
-
-    async queryCache(urlToCrawl: URL, cacheTolerance: number) {
-        const digest = this.getUrlDigest(urlToCrawl);
-
-        const cache = (await Crawled.fromFirestoreQuery(Crawled.COLLECTION.where('urlPathDigest', '==', digest).orderBy('createdAt', 'desc').limit(1)))?.[0];
-
-        if (!cache) {
-            return undefined;
-        }
-
-        const age = Date.now() - cache.createdAt.valueOf();
-        const stale = cache.createdAt.valueOf() < (Date.now() - cacheTolerance);
-        this.logger.info(`${stale ? 'Stale cache exists' : 'Cache hit'} for ${urlToCrawl}, normalized digest: ${digest}, ${age}ms old, tolerance ${cacheTolerance}ms`, {
-            url: urlToCrawl, digest, age, stale, cacheTolerance
-        });
-
-        let snapshot: PageSnapshot | undefined;
-        let screenshotUrl: string | undefined;
-        let pageshotUrl: string | undefined;
-        const preparations = [
-            this.firebaseObjectStorage.downloadFile(`snapshots/${cache._id}`).then((r) => {
-                snapshot = JSON.parse(r.toString('utf-8'));
-            }),
-            cache.screenshotAvailable ?
-                this.firebaseObjectStorage.signDownloadUrl(`screenshots/${cache._id}`, Date.now() + this.urlValidMs).then((r) => {
-                    screenshotUrl = r;
-                }) :
-                Promise.resolve(undefined),
-            cache.pageshotAvailable ?
-                this.firebaseObjectStorage.signDownloadUrl(`pageshots/${cache._id}`, Date.now() + this.urlValidMs).then((r) => {
-                    pageshotUrl = r;
-                }) :
-                Promise.resolve(undefined)
-        ];
-        try {
-            await Promise.all(preparations);
-        } catch (_err) {
-            // Swallow cache errors.
-            return undefined;
-        }
-
-        return {
-            isFresh: !stale,
-            ...cache,
-            snapshot: {
-                ...snapshot,
-                screenshot: undefined,
-                pageshot: undefined,
-                screenshotUrl,
-                pageshotUrl,
-            } as PageSnapshot & { screenshotUrl?: string; pageshotUrl?: string; }
-        };
-    }
-
-    async setToCache(urlToCrawl: URL, snapshot: PageSnapshot) {
-        const digest = this.getUrlDigest(urlToCrawl);
-
-        this.logger.info(`Caching snapshot of ${urlToCrawl}...`, { url: urlToCrawl, digest, title: snapshot?.title, href: snapshot?.href });
-        const nowDate = new Date();
-
-        const cache = Crawled.from({
-            _id: randomUUID(),
-            url: urlToCrawl.toString(),
-            createdAt: nowDate,
-            expireAt: new Date(nowDate.valueOf() + this.cacheRetentionMs),
-            urlPathDigest: digest,
-        });
-
-        const savingOfSnapshot = this.firebaseObjectStorage.saveFile(`snapshots/${cache._id}`,
-            Buffer.from(
-                JSON.stringify({
-                    ...snapshot,
-                    screenshot: undefined
-                }),
-                'utf-8'
-            ),
-            {
-                metadata: {
-                    contentType: 'application/json',
-                }
-            }
-        ).then((r) => {
-            cache.snapshotAvailable = true;
-            return r;
-        });
-
-        if (snapshot.screenshot) {
-            await this.firebaseObjectStorage.saveFile(`screenshots/${cache._id}`, snapshot.screenshot, {
-                metadata: {
-                    contentType: 'image/png',
-                }
-            });
-            cache.screenshotAvailable = true;
-        }
-        if (snapshot.pageshot) {
-            await this.firebaseObjectStorage.saveFile(`pageshots/${cache._id}`, snapshot.pageshot, {
-                metadata: {
-                    contentType: 'image/png',
-                }
-            });
-            cache.pageshotAvailable = true;
-        }
-        await savingOfSnapshot;
-        const r = await Crawled.save(cache.degradeForFireStore()).catch((err) => {
-            this.logger.error(`Failed to save cache for ${urlToCrawl}`, { err: marshalErrorLike(err) });
-
-            return undefined;
-        });
-
-        return r;
     }
 
     async *scrap(urlToCrawl: URL, crawlOpts?: ExtraScrappingOptions, crawlerOpts?: CrawlerOptions) {
