@@ -667,7 +667,6 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
                     }
 
                     const formatted = await this.formatSnapshot(crawlerOptions.respondWith, scrapped, urlToCrawl);
-                    chargeAmount = this.getChargeAmount(formatted);
                     sseStream.write({
                         event: 'data',
                         data: formatted,
@@ -707,7 +706,6 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
             }
 
             const formatted = await this.formatSnapshot(crawlerOptions.respondWith, lastScrapped, urlToCrawl);
-            chargeAmount = this.getChargeAmount(formatted);
 
             return formatted;
         }
@@ -929,26 +927,6 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
         }
     }
 
-    getChargeAmount(formatted: FormattedPage) {
-        if (!formatted) {
-            return undefined;
-        }
-
-        const textContent = formatted?.content || formatted?.description || formatted?.text || formatted?.html;
-
-        if (typeof textContent === 'string') {
-            return estimateToken(textContent);
-        }
-
-        const imageContent = formatted.screenshotUrl || formatted.screenshot;
-
-        if (imageContent) {
-            // OpenAI image token count for 1024x1024 image
-            return 765;
-        }
-
-        return undefined;
-    }
 
 
     async *scrapMany(urls: URL[], options?: ExtraScrappingOptions, crawlerOpts?: CrawlerOptions) {
