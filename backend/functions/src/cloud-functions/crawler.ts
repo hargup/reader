@@ -875,7 +875,7 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
         return r;
     }
 
-    async *cachedScrap(urlToCrawl: URL, crawlOpts?: ExtraScrappingOptions, crawlerOpts?: CrawlerOptions) {
+    async *scrap(urlToCrawl: URL, crawlOpts?: ExtraScrappingOptions, crawlerOpts?: CrawlerOptions) {
         if (crawlerOpts?.html) {
             const fakeSnapshot = {
                 href: urlToCrawl.toString(),
@@ -888,43 +888,22 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
 
             return;
         }
-        let cache;
 
-        const cacheTolerance = crawlerOpts?.cacheTolerance ?? this.cacheValidMs;
-        if (cacheTolerance && !crawlOpts?.cookies?.length) {
-            cache = await this.queryCache(urlToCrawl, cacheTolerance);
-        }
-
-        if (cache?.isFresh && (!crawlOpts?.favorScreenshot || (crawlOpts?.favorScreenshot && (cache.screenshotAvailable && cache.pageshotAvailable)))) {
-            yield this.jsdomControl.narrowSnapshot(cache.snapshot, crawlOpts);
+        if (crawlOpts?.targetSelector || crawlOpts?.removeSelector || crawlOpts?.withIframe) {
+            for await (const x of this.puppeteerControl.scrap(urlToCrawl, crawlOpts)) {
+                yield this.jsdomControl.narrowSnapshot(x, crawlOpts);
+            }
 
             return;
         }
 
-        try {
-            if (crawlOpts?.targetSelector || crawlOpts?.removeSelector || crawlOpts?.withIframe) {
-                for await (const x of this.puppeteerControl.scrap(urlToCrawl, crawlOpts)) {
-                    yield this.jsdomControl.narrowSnapshot(x, crawlOpts);
-                }
-
-                return;
-            }
-
-            yield* this.puppeteerControl.scrap(urlToCrawl, crawlOpts);
-        } catch (err: any) {
-            if (cache && !(err instanceof Error)) {
-                this.logger.warn(`Failed to scrap ${urlToCrawl}, but a stale cache is available. Falling back to cache`, { err: marshalErrorLike(err) });
-                yield this.jsdomControl.narrowSnapshot(cache.snapshot, crawlOpts);
-                return;
-            }
-            throw err;
-        }
+        yield* this.puppeteerControl.scrap(urlToCrawl, crawlOpts);
     }
 
 
 
     async *scrapMany(urls: URL[], options?: ExtraScrappingOptions, crawlerOpts?: CrawlerOptions) {
-        const iterators = urls.map((url) => this.cachedScrap(url, options, crawlerOpts));
+        const iterators = urls.map((url) => this.scrap(url, options, crawlerOpts));
 
         const results: (PageSnapshot | undefined)[] = iterators.map((_x) => undefined);
 
@@ -997,7 +976,7 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
     }
 
     async simpleCrawl(mode: string, url: URL, opts?: ExtraScrappingOptions) {
-        const it = this.cachedScrap(url, { ...opts, minIntervalMs: 500 });
+        const it = this.scrap(url, { ...opts, minIntervalMs: 500 });
 
         let lastSnapshot;
         let goodEnough = false;
