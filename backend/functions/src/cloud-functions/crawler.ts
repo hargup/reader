@@ -22,6 +22,8 @@ import { CrawlerOptions, CrawlerOptionsHeaderOnly } from '../dto/scrapping-optio
 import { DomainBlockade } from '../db/domain-blockade';
 import { JSDomControl } from '../services/jsdom';
 
+console.log('Initializing CrawlerHost');
+
 const md5Hasher = new HashManager('md5', 'hex');
 
 // const logger = new Logger('Crawler');
@@ -53,6 +55,7 @@ export interface FormattedPage {
 
 const indexProto = {
     toString: function (): string {
+        console.log('Converting index to string');
         return _(this)
             .toPairs()
             .map(([k, v]) => k ? `[${_.upperFirst(_.lowerCase(k))}] ${v}` : '')
@@ -81,18 +84,29 @@ export class CrawlerHost extends RPCHost {
         protected threadLocal: AsyncContext,
     ) {
         super(...arguments);
+        console.log('CrawlerHost constructor called');
+        console.log('Initializing CrawlerHost with dependencies:', {
+            puppeteerControl: !!puppeteerControl,
+            jsdomControl: !!jsdomControl,
+            firebaseObjectStorage: !!firebaseObjectStorage,
+            threadLocal: !!threadLocal
+        });
 
         puppeteerControl.on('crawled', async (snapshot: PageSnapshot, options: ScrappingOptions & { url: URL; }) => {
+            console.log('Crawled event received', { url: options.url.toString() });
             if (!snapshot.title?.trim() && !snapshot.pdfs?.length) {
+                console.log('Skipping snapshot due to empty title and no PDFs');
                 return;
             }
             if (options.cookies?.length) {
+                console.log('Skipping caching due to cookies');
                 // Potential privacy issue, dont cache if cookies are used
                 return;
             }
         });
 
         puppeteerControl.on('abuse', async (abuseEvent: { url: URL; reason: string, sn: number; }) => {
+            console.log('Abuse event received', abuseEvent);
             this.logger.warn(`Abuse detected on ${abuseEvent.url}, blocking ${abuseEvent.url.hostname}`, { reason: abuseEvent.reason, sn: abuseEvent.sn });
 
             await DomainBlockade.save(DomainBlockade.from({
@@ -102,6 +116,7 @@ export class CrawlerHost extends RPCHost {
                 createdAt: new Date(),
                 expireAt: new Date(Date.now() + this.abuseBlockMs),
             })).catch((err) => {
+                console.error('Failed to save domain blockade', err);
                 this.logger.warn(`Failed to save domain blockade for ${abuseEvent.url.hostname}`, { err: marshalErrorLike(err) });
             });
 
@@ -109,12 +124,16 @@ export class CrawlerHost extends RPCHost {
     }
 
     override async init() {
+        console.log('Initializing CrawlerHost');
         await this.dependencyReady();
 
         this.emit('ready');
+        console.log('CrawlerHost ready');
+        console.log('CrawlerHost initialization complete');
     }
 
     getIndex() {
+        console.log('Getting index');
         const indexObject: Record<string, string | number | undefined> = Object.create(indexProto);
 
         Object.assign(indexObject, {
@@ -124,6 +143,7 @@ export class CrawlerHost extends RPCHost {
             sourceCode: 'https://github.com/jina-ai/reader',
         });
 
+        console.log('Index object created:', indexObject);
         return indexObject;
     }
 
@@ -132,11 +152,13 @@ export class CrawlerHost extends RPCHost {
         url?: string | URL;
         imgDataUrlToObjectUrl?: boolean;
     }) {
+        console.log('Getting Turndown service', options);
         const turnDownService = new TurndownService({
             codeBlockStyle: 'fenced',
             preformattedCode: true,
         } as any);
         if (!options?.noRules) {
+            console.log('Adding Turndown rules');
             turnDownService.addRule('remove-irrelevant', {
                 filter: ['meta', 'style', 'script', 'noscript', 'link', 'textarea', 'select'],
                 replacement: () => ''
@@ -152,6 +174,7 @@ export class CrawlerHost extends RPCHost {
         }
 
         if (options?.imgDataUrlToObjectUrl) {
+            console.log('Adding data-url-to-pseudo-object-url rule');
             turnDownService.addRule('data-url-to-pseudo-object-url', {
                 filter: (node) => Boolean(node.tagName === 'IMG' && node.getAttribute('src')?.startsWith('data:')),
                 replacement: (_content, node: any) => {
@@ -234,13 +257,16 @@ export class CrawlerHost extends RPCHost {
             }
         });
 
+        console.log('Turndown service configured');
         return turnDownService;
     }
 
     getGeneralSnapshotMixins(snapshot: PageSnapshot) {
+        console.log('Getting general snapshot mixins');
         let inferred;
         const mixin: any = {};
         if (this.threadLocal.get('withImagesSummary')) {
+            console.log('Generating image summary');
             inferred ??= this.jsdomControl.inferSnapshot(snapshot);
             const imageSummary = {} as { [k: string]: string; };
             const imageIdxTrack = new Map<string, number[]>();
@@ -264,10 +290,13 @@ export class CrawlerHost extends RPCHost {
                         }
                     ).fromPairs()
                     .value();
+            console.log(`Generated image summary with ${Object.keys(mixin.images).length} images`);
         }
         if (this.threadLocal.get('withLinksSummary')) {
+            console.log('Generating link summary');
             inferred ??= this.jsdomControl.inferSnapshot(snapshot);
             mixin.links = _.invert(inferred.links || {});
+            console.log(`Generated link summary with ${Object.keys(mixin.links).length} links`);
         }
 
         return mixin;
@@ -277,8 +306,10 @@ export class CrawlerHost extends RPCHost {
         screenshotUrl?: string;
         pageshotUrl?: string;
     }, nominalUrl?: URL) {
+        console.log('Formatting snapshot', { mode, url: nominalUrl?.toString() });
         if (mode === 'screenshot') {
             if (snapshot.screenshot && !snapshot.screenshotUrl) {
+                console.log('Saving screenshot');
                 const fid = `instant-screenshots/${randomUUID()}`;
                 await this.firebaseObjectStorage.saveFile(fid, snapshot.screenshot, {
                     metadata: {
@@ -286,6 +317,7 @@ export class CrawlerHost extends RPCHost {
                     }
                 });
                 snapshot.screenshotUrl = await this.firebaseObjectStorage.signDownloadUrl(fid, Date.now() + this.urlValidMs);
+                console.log('Screenshot saved and URL generated', { screenshotUrl: snapshot.screenshotUrl });
             }
 
             return {
@@ -299,6 +331,7 @@ export class CrawlerHost extends RPCHost {
         }
         if (mode === 'pageshot') {
             if (snapshot.pageshot && !snapshot.pageshotUrl) {
+                console.log('Saving pageshot');
                 const fid = `instant-screenshots/${randomUUID()}`;
                 await this.firebaseObjectStorage.saveFile(fid, snapshot.pageshot, {
                     metadata: {
@@ -306,6 +339,7 @@ export class CrawlerHost extends RPCHost {
                     }
                 });
                 snapshot.pageshotUrl = await this.firebaseObjectStorage.signDownloadUrl(fid, Date.now() + this.urlValidMs);
+                console.log('Pageshot saved and URL generated', { pageshotUrl: snapshot.pageshotUrl });
             }
 
             return {
@@ -318,6 +352,7 @@ export class CrawlerHost extends RPCHost {
             } as FormattedPage;
         }
         if (mode === 'html') {
+            console.log('Formatting as HTML');
             return {
                 ...this.getGeneralSnapshotMixins(snapshot),
                 html: snapshot.html,
@@ -328,27 +363,9 @@ export class CrawlerHost extends RPCHost {
         }
 
         let pdfMode = false;
-        // if (snapshot.pdfs?.length && !snapshot.title) {
-        //     const pdf = await this.pdfExtractor.cachedExtract(snapshot.pdfs[0],
-        //         this.threadLocal.get('cacheTolerance')
-        //     );
-        //     if (pdf) {
-        //         pdfMode = true;
-        //         snapshot.title = pdf.meta?.Title;
-        //         snapshot.text = pdf.text || snapshot.text;
-        //         snapshot.parsed = {
-        //             content: pdf.content,
-        //             textContent: pdf.content,
-        //             length: pdf.content?.length,
-        //             byline: pdf.meta?.Author,
-        //             lang: pdf.meta?.Language || undefined,
-        //             title: pdf.meta?.Title,
-        //             publishedTime: this.pdfExtractor.parsePdfDate(pdf.meta?.ModDate || pdf.meta?.CreationDate)?.toISOString(),
-        //         };
-        //     }
-        // }
 
         if (mode === 'text') {
+            console.log('Formatting as text');
             return {
                 ...this.getGeneralSnapshotMixins(snapshot),
                 text: snapshot.text,
@@ -364,6 +381,7 @@ export class CrawlerHost extends RPCHost {
         const imageIdxTrack = new Map<string, number[]>();
         do {
             if (pdfMode) {
+                console.log('PDF mode detected');
                 contentText = snapshot.parsed?.content || snapshot.text;
                 break;
             }
@@ -372,11 +390,13 @@ export class CrawlerHost extends RPCHost {
                 snapshot.maxElemDepth! > 256 ||
                 snapshot.elemCount! > 70_000
             ) {
+                console.log('Degrading to text to protect the server');
                 this.logger.warn('Degrading to text to protect the server', { url: snapshot.href });
                 contentText = snapshot.text;
                 break;
             }
 
+            console.log('Processing HTML content');
             const jsDomElementOfHTML = this.jsdomControl.snippetToElement(snapshot.html, snapshot.href);
             let toBeTurnedToMd = jsDomElementOfHTML;
             let turnDownService = this.getTurndown({ url: snapshot.rebase || nominalUrl, imgDataUrlToObjectUrl });
@@ -565,13 +585,16 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
     }
 
     async crawl(req: Request, res: Response) {
+        console.log('Crawl method called with request:', req.url);
         // const rpcReflect: RPCReflection = {};
         const ctx = { req, res };
         const crawlerOptionsHeaderOnly = CrawlerOptionsHeaderOnly.from(req.headers);
         const crawlerOptionsParamsAllowed = CrawlerOptions.from(req.method === 'POST' ? req.body : req.query);
         const noSlashURL = ctx.req.url.slice(1);
         const crawlerOptions = ctx.req.method === 'GET' ? crawlerOptionsHeaderOnly : crawlerOptionsParamsAllowed;
+        console.log('Crawler options:', crawlerOptions);
         if (!noSlashURL && !crawlerOptions.url) {
+            console.log('No URL provided, returning index');
             if (!ctx.req.accepts('text/plain') && (ctx.req.accepts('text/json') || ctx.req.accepts('application/json'))) {
                 return this.getIndex();
             }
@@ -585,6 +608,7 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
         this.puppeteerControl.circuitBreakerHosts.add(
             ctx.req.hostname.toLowerCase()
         );
+        console.log('Added to circuit breaker hosts:', ctx.req.hostname.toLowerCase());
 
         let urlToCrawl;
         const normalizeUrl = (await pNormalizeUrl).default;
@@ -600,13 +624,16 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
                     }
                 )
             );
+            console.log('Normalized URL to crawl:', urlToCrawl.toString());
         } catch (err) {
+            console.error('Error normalizing URL:', err);
             throw new ParamValidationError({
                 message: `${err}`,
                 path: 'url'
             });
         }
         if (urlToCrawl.protocol !== 'http:' && urlToCrawl.protocol !== 'https:') {
+            console.error('Invalid protocol:', urlToCrawl.protocol);
             throw new ParamValidationError({
                 message: `Invalid protocol ${urlToCrawl.protocol}`,
                 path: 'url'
@@ -614,6 +641,7 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
         }
 
         const crawlOpts = this.configure(crawlerOptions);
+        console.log('Configured crawl options:', crawlOpts);
 
         if (!ctx.req.accepts('text/plain') && ctx.req.accepts('text/event-stream')) {
             const sseStream = new OutputServerEventStream();
@@ -723,7 +751,12 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
     }
 
     async *scrap(urlToCrawl: URL, crawlOpts?: ExtraScrappingOptions, crawlerOpts?: CrawlerOptions) {
+        console.log('Starting scrap for URL:', urlToCrawl.toString());
+        console.log('Crawl options:', crawlOpts);
+        console.log('Crawler options:', crawlerOpts);
+
         if (crawlerOpts?.html) {
+            console.log('Using provided HTML');
             const fakeSnapshot = {
                 href: urlToCrawl.toString(),
                 html: crawlerOpts.html,
@@ -737,13 +770,16 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
         }
 
         if (crawlOpts?.targetSelector || crawlOpts?.removeSelector || crawlOpts?.withIframe) {
+            console.log('Using custom selectors or iframe');
             for await (const x of this.puppeteerControl.scrap(urlToCrawl, crawlOpts)) {
+                console.log('Narrowing snapshot');
                 yield this.jsdomControl.narrowSnapshot(x, crawlOpts);
             }
 
             return;
         }
 
+        console.log('Using default scraping method');
         yield* this.puppeteerControl.scrap(urlToCrawl, crawlOpts);
     }
 
