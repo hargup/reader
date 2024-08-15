@@ -190,21 +190,29 @@ export class CrawlerOptions extends AutoCastable {
 
     static override from(input: any) {
         const instance = super.from(input) as CrawlerOptions;
-        const ctx = Reflect.get(input, RPC_CALL_ENVIRONMENT) as {
-            req: Request,
-            res: Response,
-        } | undefined;
+        const ctx = Reflect.get(input, RPC_CALL_ENVIRONMENT);
+        console.log('RPC_CALL_ENVIRONMENT:', ctx);
 
-        console.log(`ctx: ${JSON.stringify(ctx)}`);
-        const customMode = ctx?.req.get('x-respond-with') || ctx?.req.get('x-return-format');
-        console.log(`customMode: ${customMode}`);
-        if (customMode !== undefined) {
-            instance.respondWith = customMode;
-        }
+        if (ctx && typeof ctx === 'object' && 'req' in ctx && 'res' in ctx) {
+            const typedCtx = ctx as { req: Request, res: Response };
+            console.log('Request headers:', typedCtx.req.headers);
 
-        const withGeneratedAlt = ctx?.req.get('x-with-generated-alt');
-        if (withGeneratedAlt !== undefined) {
-            instance.withGeneratedAlt = Boolean(withGeneratedAlt);
+            const getHeader = (name: string): string | undefined => {
+                const value = typedCtx.req.headers[name.toLowerCase()];
+                return Array.isArray(value) ? value[0] : value;
+            };
+
+            const customMode = getHeader('X-Respond-With') || getHeader('X-Return-Format');
+            if (customMode) {
+                instance.respondWith = customMode;
+            }
+
+            const withGeneratedAlt = getHeader('X-With-Generated-Alt');
+            if (withGeneratedAlt !== undefined) {
+                instance.withGeneratedAlt = withGeneratedAlt.toLowerCase() === 'true';
+            }
+        } else {
+            console.warn('Invalid or missing RPC_CALL_ENVIRONMENT');
         }
         const withLinksSummary = ctx?.req.get('x-with-links-summary');
         if (withLinksSummary !== undefined) {
