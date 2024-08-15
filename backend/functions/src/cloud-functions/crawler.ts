@@ -674,7 +674,7 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
             });
         }
 
-        const crawlOpts = this.configure(crawlerOptions);
+        const crawlOpts = this.configure(crawlerOptions, req);
         console.log('Configured crawl options:', crawlOpts);
 
         if (!ctx.req.accepts('text/plain') && ctx.req.accepts('text/event-stream')) {
@@ -865,7 +865,7 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
         }
     }
 
-    configure(opts: CrawlerOptions) {
+    configure(opts: CrawlerOptions, req: Request) {
 
         this.threadLocal.set('withGeneratedAlt', opts.withGeneratedAlt);
         this.threadLocal.set('withLinksSummary', opts.withLinksSummary);
@@ -877,15 +877,17 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
             this.threadLocal.set('timeout', opts.timeout * 1000);
         }
 
-        const randomCookies = [
-            { name: 'session_id', value: Math.random().toString(36).substring(7), url: 'https://hargup-ripeharlequincephalopod.web.val.run/' },
-            { name: 'user_pref', value: 'dark_mode', url: 'https://hargup-ripeharlequincephalopod.web.val.run/' },
-            { name: 'visit_count', value: Math.floor(Math.random() * 10).toString(), url: 'https://hargup-ripeharlequincephalopod.web.val.run/' }
-        ];
+        const cookies = req.headers['x-set-cookie'] ? 
+            (Array.isArray(req.headers['x-set-cookie']) ? req.headers['x-set-cookie'] : [req.headers['x-set-cookie']])
+                .map(cookie => {
+                    const [name, value] = cookie.split('=');
+                    return { name, value, url: opts.url || req.query.url as string };
+                })
+            : [];
 
         const crawlOpts: ExtraScrappingOptions = {
             proxyUrl: opts.proxyUrl,
-            cookies: randomCookies,
+            cookies: cookies,
             favorScreenshot: ['screenshot', 'pageshot'].includes(opts.respondWith),
             removeSelector: opts.removeSelector,
             targetSelector: opts.targetSelector,
