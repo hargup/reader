@@ -877,7 +877,7 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
             this.threadLocal.set('timeout', opts.timeout * 1000);
         }
 
-        const cookies = req.headers['x-set-cookie'] ? 
+        const cookies = req.headers['x-set-cookie'] ?
             (Array.isArray(req.headers['x-set-cookie']) ? req.headers['x-set-cookie'] : [req.headers['x-set-cookie']])
                 .map(cookie => {
                     const [name, value] = cookie.split('=');
@@ -885,6 +885,7 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
                 })
             : [];
 
+        console.log('Cookies:', cookies);
         const crawlOpts: ExtraScrappingOptions = {
             proxyUrl: opts.proxyUrl,
             cookies: cookies,
