@@ -153,19 +153,46 @@ All images in that page that lack `alt` tag can be auto-captioned by a VLM (visi
 curl -H "X-With-Generated-Alt: true" https://r.jina.ai/https://en.m.wikipedia.org/wiki/Main_Page
 ```
 
-## Install
+## Install and Setup
 
 You will need the following tools to run the project:
 - Node v18 (The build fails for Node version >18)
 - Firebase CLI (`npm install -g firebase-tools`)
 
-For backend, go to the `backend/functions` directory and install the npm dependencies.
+To set up the project:
 
-```bash
-git clone git@github.com:jina-ai/reader.git
-cd backend/functions
-npm install
-```
+1. Clone the repository:
+   ```bash
+   git clone git@github.com:jina-ai/reader.git
+   ```
+
+2. Navigate to the backend functions directory:
+   ```bash
+   cd reader/backend/functions
+   ```
+
+3. Install the npm dependencies:
+   ```bash
+   npm install
+   ```
+
+## Usage
+
+To run the express service:
+
+1. In the `backend/functions` directory, start the service using nodemon:
+   ```bash
+   npx nodemon --watch ./src --exec "npm run build && node build/server.js"
+   ```
+
+2. Once the service is running, you can use curl to make requests. For example:
+   ```bash
+   curl -H "X-Respond-With: markdown" http://localhost:3000/https://example.com
+   ```
+
+This will fetch the content from https://example.com and return it in markdown format.
+
+You can customize the request by changing the `X-Respond-With` header to other supported formats like `html`, `text`, `screenshot`, or `pageshot`.
 
 ## What is `thinapps-shared` submodule?
 
