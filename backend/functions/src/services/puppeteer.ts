@@ -463,6 +463,7 @@ document.addEventListener('load', handlePageLoad);
 
     async *scrap(parsedUrl: URL, options?: ScrappingOptions): AsyncGenerator<PageSnapshot | undefined> {
         // parsedUrl.search = '';
+        console.log('Scraping options:', options);
         const url = parsedUrl.toString();
 
         let snapshot: PageSnapshot | undefined;

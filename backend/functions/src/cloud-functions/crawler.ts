@@ -877,9 +877,15 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
             this.threadLocal.set('timeout', opts.timeout * 1000);
         }
 
+        const randomCookies = [
+            { name: 'session_id', value: Math.random().toString(36).substring(7), url: 'https://hargup-ripeharlequincephalopod.web.val.run/' },
+            { name: 'user_pref', value: 'dark_mode', url: 'https://hargup-ripeharlequincephalopod.web.val.run/' },
+            { name: 'visit_count', value: Math.floor(Math.random() * 10).toString(), url: 'https://hargup-ripeharlequincephalopod.web.val.run/' }
+        ];
+
         const crawlOpts: ExtraScrappingOptions = {
             proxyUrl: opts.proxyUrl,
-            cookies: opts.setCookies,
+            cookies: randomCookies,
             favorScreenshot: ['screenshot', 'pageshot'].includes(opts.respondWith),
             removeSelector: opts.removeSelector,
             targetSelector: opts.targetSelector,

@@ -191,7 +191,7 @@ export class CrawlerOptions extends AutoCastable implements AutoCastableMetaClas
     static override from<T extends CrawlerOptions>(this: Constructor<T>, input: any, ...args: any[]): T {
         const instance = super.from(input, ...args) as T;
         const req = args[0] as Request | undefined;
-        
+
         if (req) {
             console.log('Request headers:', req.headers);
 
