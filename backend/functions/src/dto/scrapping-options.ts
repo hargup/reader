@@ -1,4 +1,4 @@
-import { Also, AutoCastable, Prop, RPC_CALL_ENVIRONMENT } from 'civkit'; // Adjust the import based on where your decorators are defined
+import { Also, AutoCastable, Prop, AutoCastableMetaClass, Constructor } from 'civkit'; // Adjust the import based on where your decorators are defined
 import type { Request, Response } from 'express';
 import type { CookieParam } from 'puppeteer';
 import { parseString as parseSetCookieString } from 'set-cookie-parser';
@@ -115,7 +115,7 @@ import { parseString as parseSetCookieString } from 'set-cookie-parser';
         }
     }
 })
-export class CrawlerOptions extends AutoCastable {
+export class CrawlerOptions extends AutoCastable implements AutoCastableMetaClass {
 
     @Prop()
     url?: string;
@@ -188,17 +188,15 @@ export class CrawlerOptions extends AutoCastable {
     })
     timeout?: number | null;
 
-    static override from(input: any) {
-        const instance = super.from(input) as CrawlerOptions;
-        const ctx = Reflect.get(input, RPC_CALL_ENVIRONMENT);
-        console.log('RPC_CALL_ENVIRONMENT:', ctx);
-
-        if (ctx && typeof ctx === 'object' && 'req' in ctx && 'res' in ctx) {
-            const typedCtx = ctx as { req: Request, res: Response };
-            console.log('Request headers:', typedCtx.req.headers);
+    static override from<T extends CrawlerOptions>(this: Constructor<T>, input: any, ...args: any[]): T {
+        const instance = super.from(input, ...args) as T;
+        const req = args[0] as Request | undefined;
+        
+        if (req) {
+            console.log('Request headers:', req.headers);
 
             const getHeader = (name: string): string | undefined => {
-                const value = typedCtx.req.headers[name.toLowerCase()];
+                const value = req.headers[name.toLowerCase()];
                 return Array.isArray(value) ? value[0] : value;
             };
 
@@ -211,77 +209,86 @@ export class CrawlerOptions extends AutoCastable {
             if (withGeneratedAlt !== undefined) {
                 instance.withGeneratedAlt = withGeneratedAlt.toLowerCase() === 'true';
             }
-        } else {
-            console.warn('Invalid or missing RPC_CALL_ENVIRONMENT');
-        }
-        const withLinksSummary = ctx?.req.get('x-with-links-summary');
-        if (withLinksSummary !== undefined) {
-            instance.withLinksSummary = Boolean(withLinksSummary);
-        }
-        const withImagesSummary = ctx?.req.get('x-with-images-summary');
-        if (withImagesSummary !== undefined) {
-            instance.withImagesSummary = Boolean(withImagesSummary);
-        }
-        const noCache = ctx?.req.get('x-no-cache');
-        if (noCache !== undefined) {
-            instance.noCache = Boolean(noCache);
-        }
-        if (instance.noCache && instance.cacheTolerance === undefined) {
-            instance.cacheTolerance = 0;
-        }
-        let cacheTolerance = parseInt(ctx?.req.get('x-cache-tolerance') || '');
-        if (!isNaN(cacheTolerance)) {
-            instance.cacheTolerance = cacheTolerance;
-        }
 
-        let timeoutSeconds = parseInt(ctx?.req.get('x-timeout') || '');
-        if (!isNaN(timeoutSeconds) && timeoutSeconds > 0) {
-            instance.timeout = timeoutSeconds <= 180 ? timeoutSeconds : 180;
-        } else if (ctx?.req.get('x-timeout')) {
-            instance.timeout = null;
-        }
+            const withLinksSummary = getHeader('x-with-links-summary');
+            if (withLinksSummary !== undefined) {
+                instance.withLinksSummary = Boolean(withLinksSummary);
+            }
 
-        const removeSelector = ctx?.req.get('x-remove-selector')?.split(', ');
-        instance.removeSelector ??= removeSelector;
-        const targetSelector = ctx?.req.get('x-target-selector')?.split(', ');
-        instance.targetSelector ??= targetSelector;
-        const waitForSelector = ctx?.req.get('x-wait-for-selector')?.split(', ');
-        instance.waitForSelector ??= waitForSelector || instance.targetSelector;
-        instance.targetSelector = filterSelector(instance.targetSelector);
-        const overrideUserAgent = ctx?.req.get('x-user-agent');
-        instance.userAgent ??= overrideUserAgent;
+            const withImagesSummary = getHeader('x-with-images-summary');
+            if (withImagesSummary !== undefined) {
+                instance.withImagesSummary = Boolean(withImagesSummary);
+            }
 
-        const keepImgDataUrl = ctx?.req.get('x-keep-img-data-url');
-        if (keepImgDataUrl !== undefined) {
-            instance.keepImgDataUrl = Boolean(keepImgDataUrl);
-        }
-        const withIframe = ctx?.req.get('x-with-iframe');
-        if (withIframe !== undefined) {
-            instance.withIframe = Boolean(withIframe);
-        }
-        if (instance.withIframe) {
-            instance.timeout ??= null;
-        }
+            const noCache = getHeader('x-no-cache');
+            if (noCache !== undefined) {
+                instance.noCache = Boolean(noCache);
+            }
 
-        const cookies: CookieParam[] = [];
-        const setCookieHeaders = ctx?.req.get('x-set-cookie')?.split(', ') || (instance.setCookies as any as string[]);
-        if (Array.isArray(setCookieHeaders)) {
-            for (const setCookie of setCookieHeaders) {
+            if (instance.noCache && instance.cacheTolerance === undefined) {
+                instance.cacheTolerance = 0;
+            }
+
+            let cacheTolerance = parseInt(getHeader('x-cache-tolerance') || '');
+            if (!isNaN(cacheTolerance)) {
+                instance.cacheTolerance = cacheTolerance;
+            }
+
+            let timeoutSeconds = parseInt(getHeader('x-timeout') || '');
+            if (!isNaN(timeoutSeconds) && timeoutSeconds > 0) {
+                instance.timeout = timeoutSeconds <= 180 ? timeoutSeconds : 180;
+            } else if (getHeader('x-timeout')) {
+                instance.timeout = null;
+            }
+
+            const removeSelector = getHeader('x-remove-selector')?.split(', ');
+            instance.removeSelector ??= removeSelector;
+
+            const targetSelector = getHeader('x-target-selector')?.split(', ');
+            instance.targetSelector ??= targetSelector;
+
+            const waitForSelector = getHeader('x-wait-for-selector')?.split(', ');
+            instance.waitForSelector ??= waitForSelector || instance.targetSelector;
+
+            instance.targetSelector = filterSelector(instance.targetSelector);
+
+            const overrideUserAgent = getHeader('x-user-agent');
+            instance.userAgent ??= overrideUserAgent;
+
+            const keepImgDataUrl = getHeader('x-keep-img-data-url');
+            if (keepImgDataUrl !== undefined) {
+                instance.keepImgDataUrl = Boolean(keepImgDataUrl);
+            }
+
+            const withIframe = getHeader('x-with-iframe');
+            if (withIframe !== undefined) {
+                instance.withIframe = Boolean(withIframe);
+            }
+
+            if (instance.withIframe) {
+                instance.timeout ??= null;
+            }
+
+            const cookies: CookieParam[] = [];
+            const setCookieHeaders = getHeader('x-set-cookie')?.split(', ') || (instance.setCookies as any as string[]);
+            if (Array.isArray(setCookieHeaders)) {
+                for (const setCookie of setCookieHeaders) {
+                    cookies.push({
+                        ...parseSetCookieString(setCookie, { decodeValues: false }) as CookieParam,
+                    });
+                }
+            } else if (setCookieHeaders && typeof setCookieHeaders === 'string') {
                 cookies.push({
-                    ...parseSetCookieString(setCookie, { decodeValues: false }) as CookieParam,
+                    ...parseSetCookieString(setCookieHeaders, { decodeValues: false }) as CookieParam,
                 });
             }
-        } else if (setCookieHeaders && typeof setCookieHeaders === 'string') {
-            cookies.push({
-                ...parseSetCookieString(setCookieHeaders, { decodeValues: false }) as CookieParam,
-            });
-        }
 
-        const proxyUrl = ctx?.req.get('x-proxy-url');
-        instance.proxyUrl ??= proxyUrl;
+            const proxyUrl = getHeader('x-proxy-url');
+            instance.proxyUrl ??= proxyUrl;
 
-        if (instance.cacheTolerance) {
-            instance.cacheTolerance = instance.cacheTolerance * 1000;
+            if (instance.cacheTolerance) {
+                instance.cacheTolerance = instance.cacheTolerance * 1000;
+            }
         }
 
         return instance;
@@ -289,12 +296,9 @@ export class CrawlerOptions extends AutoCastable {
 }
 
 export class CrawlerOptionsHeaderOnly extends CrawlerOptions {
-    static override from(input: any) {
-        const instance = super.from({
-            [RPC_CALL_ENVIRONMENT]: Reflect.get(input, RPC_CALL_ENVIRONMENT),
-        }) as CrawlerOptionsHeaderOnly;
-
-        return instance;
+    static override from<T extends CrawlerOptionsHeaderOnly>(this: Constructor<T>, ...args: any[]): T {
+        const req = args[0] as Request;
+        return super.from({}, req) as T;
     }
 }
 
