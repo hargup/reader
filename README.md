@@ -1,3 +1,52 @@
+# Reader Clone which works!
+
+- Jina.ai 's reader API helps get better output from LLMs by converting URLs to LLM-friendly input. Though the version hosted on github cannot really be used by 3rd parties as it depends on multiple internal packages. This repo is a clone of the reader API without any of the internal dependencies which you can run locally and self-host.
+
+
+## Install and Setup
+
+You will need the following tools to run the project:
+- Node v18 (The build fails for Node version >18)
+- Firebase CLI (`npm install -g firebase-tools`)
+
+To set up the project:
+
+1. Clone the repository:
+   ```bash
+   git clone git@github.com:hargup/reader.git
+   ```
+
+2. Navigate to the backend functions directory:
+   ```bash
+   cd reader/backend/functions
+   ```
+
+3. Install the npm dependencies:
+   ```bash
+   npm install
+   ```
+
+## Usage
+
+To run the express service:
+
+1. In the `backend/functions` directory, start the service using nodemon:
+   ```bash
+   npx nodemon --watch ./src --exec "npm run build && node build/server.js"
+   ```
+
+2. Once the service is running, you can use curl to make requests. For example:
+   ```bash
+   curl -H "X-Respond-With: markdown" http://localhost:3000/https://example.com
+   ```
+
+This will fetch the content from https://example.com and return it in markdown format.
+
+You can customize the request by changing the `X-Respond-With` header to other supported formats like `html`, `text`, `screenshot`, or `pageshot`.
+
+
+---
+
 # Reader
 
 Your LLMs deserve better input.
@@ -14,6 +63,8 @@ Or just visit these URLs (**Read**) https://r.jina.ai/https://github.com/jina-ai
 
 <img width="973" alt="image" src="https://github.com/jina-ai/reader/assets/2041322/2067c7a2-c12e-4465-b107-9a16ca178d41">
 <img width="973" alt="image" src="https://github.com/jina-ai/reader/assets/2041322/675ac203-f246-41c2-b094-76318240159f">
+
+
 
 
 ## Updates
@@ -153,55 +204,6 @@ All images in that page that lack `alt` tag can be auto-captioned by a VLM (visi
 curl -H "X-With-Generated-Alt: true" https://r.jina.ai/https://en.m.wikipedia.org/wiki/Main_Page
 ```
 
-## Install and Setup
-
-You will need the following tools to run the project:
-- Node v18 (The build fails for Node version >18)
-- Firebase CLI (`npm install -g firebase-tools`)
-
-To set up the project:
-
-1. Clone the repository:
-   ```bash
-   git clone git@github.com:jina-ai/reader.git
-   ```
-
-2. Navigate to the backend functions directory:
-   ```bash
-   cd reader/backend/functions
-   ```
-
-3. Install the npm dependencies:
-   ```bash
-   npm install
-   ```
-
-## Usage
-
-To run the express service:
-
-1. In the `backend/functions` directory, start the service using nodemon:
-   ```bash
-   npx nodemon --watch ./src --exec "npm run build && node build/server.js"
-   ```
-
-2. Once the service is running, you can use curl to make requests. For example:
-   ```bash
-   curl -H "X-Respond-With: markdown" http://localhost:3000/https://example.com
-   ```
-
-This will fetch the content from https://example.com and return it in markdown format.
-
-You can customize the request by changing the `X-Respond-With` header to other supported formats like `html`, `text`, `screenshot`, or `pageshot`.
-
-## What is `thinapps-shared` submodule?
-
-You might notice a reference to `thinapps-shared` submodule, an internal package we use to share code across our products. While it’s not open-sourced and isn't integral to the Reader's functions, it mainly helps with decorators, logging, secrets management, etc. Feel free to ignore it for now.
-
-That said, this is *the single codebase* behind `https://r.jina.ai`, so everytime we commit here, we will deploy the new version to the `https://r.jina.ai`.
-
-## Having trouble on some websites?
-Please raise an issue with the URL you are having trouble with. We will look into it and try to fix it.
 
 ## License
-Reader is backed by [Jina AI](https://jina.ai) and licensed under [Apache-2.0](./LICENSE).
+[Apache-2.0](./LICENSE)
