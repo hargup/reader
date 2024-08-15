@@ -1,4 +1,4 @@
-# Reader Clone which works!
+# Reader Clone which is deployable locally!
 
 - Jina.ai 's reader API helps get better output from LLMs by converting URLs to LLM-friendly input. Though the version hosted on github cannot really be used by 3rd parties as it depends on multiple internal packages. This repo is a clone of the reader API without any of the internal dependencies which you can run locally and self-host.
 
