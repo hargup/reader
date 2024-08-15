@@ -191,7 +191,7 @@ export class CrawlerOptions extends AutoCastable implements AutoCastableMetaClas
     static override from<T extends CrawlerOptions>(this: Constructor<T>, input: any, ...args: any[]): T {
         const instance = super.from(input, ...args) as T;
         const req = args[0] as Request | undefined;
-
+        
         if (req) {
             console.log('Request headers:', req.headers);
 
@@ -203,92 +203,74 @@ export class CrawlerOptions extends AutoCastable implements AutoCastableMetaClas
             const customMode = getHeader('X-Respond-With') || getHeader('X-Return-Format');
             if (customMode) {
                 instance.respondWith = customMode;
-                console.log('Set respondWith:', instance.respondWith);
             }
 
             const withGeneratedAlt = getHeader('X-With-Generated-Alt');
             if (withGeneratedAlt !== undefined) {
                 instance.withGeneratedAlt = withGeneratedAlt.toLowerCase() === 'true';
-                console.log('Set withGeneratedAlt:', instance.withGeneratedAlt);
             }
 
             const withLinksSummary = getHeader('x-with-links-summary');
             if (withLinksSummary !== undefined) {
                 instance.withLinksSummary = Boolean(withLinksSummary);
-                console.log('Set withLinksSummary:', instance.withLinksSummary);
             }
 
             const withImagesSummary = getHeader('x-with-images-summary');
             if (withImagesSummary !== undefined) {
                 instance.withImagesSummary = Boolean(withImagesSummary);
-                console.log('Set withImagesSummary:', instance.withImagesSummary);
             }
 
             const noCache = getHeader('x-no-cache');
             if (noCache !== undefined) {
                 instance.noCache = Boolean(noCache);
-                console.log('Set noCache:', instance.noCache);
             }
 
             if (instance.noCache && instance.cacheTolerance === undefined) {
                 instance.cacheTolerance = 0;
-                console.log('Set cacheTolerance to 0 due to noCache');
             }
 
             let cacheTolerance = parseInt(getHeader('x-cache-tolerance') || '');
             if (!isNaN(cacheTolerance)) {
                 instance.cacheTolerance = cacheTolerance;
-                console.log('Set cacheTolerance:', instance.cacheTolerance);
             }
 
             let timeoutSeconds = parseInt(getHeader('x-timeout') || '');
             if (!isNaN(timeoutSeconds) && timeoutSeconds > 0) {
                 instance.timeout = timeoutSeconds <= 180 ? timeoutSeconds : 180;
-                console.log('Set timeout:', instance.timeout);
             } else if (getHeader('x-timeout')) {
                 instance.timeout = null;
-                console.log('Set timeout to null');
             }
 
             const removeSelector = getHeader('x-remove-selector')?.split(', ');
             instance.removeSelector ??= removeSelector;
-            console.log('Set removeSelector:', instance.removeSelector);
 
             const targetSelector = getHeader('x-target-selector')?.split(', ');
             instance.targetSelector ??= targetSelector;
-            console.log('Set targetSelector:', instance.targetSelector);
 
             const waitForSelector = getHeader('x-wait-for-selector')?.split(', ');
             instance.waitForSelector ??= waitForSelector || instance.targetSelector;
-            console.log('Set waitForSelector:', instance.waitForSelector);
 
             instance.targetSelector = filterSelector(instance.targetSelector);
-            console.log('Filtered targetSelector:', instance.targetSelector);
 
             const overrideUserAgent = getHeader('x-user-agent');
             instance.userAgent ??= overrideUserAgent;
-            console.log('Set userAgent:', instance.userAgent);
 
             const keepImgDataUrl = getHeader('x-keep-img-data-url');
             if (keepImgDataUrl !== undefined) {
                 instance.keepImgDataUrl = Boolean(keepImgDataUrl);
-                console.log('Set keepImgDataUrl:', instance.keepImgDataUrl);
             }
 
             const withIframe = getHeader('x-with-iframe');
             if (withIframe !== undefined) {
                 instance.withIframe = Boolean(withIframe);
-                console.log('Set withIframe:', instance.withIframe);
             }
 
             if (instance.withIframe) {
                 instance.timeout ??= null;
-                console.log('Set timeout to null due to withIframe');
             }
 
             const cookies: CookieParam[] = [];
             const setCookieHeaders = getHeader('x-set-cookie')?.split(', ') || (instance.setCookies as any as string[]);
-            console.log('SetCookieHeaders:', setCookieHeaders);
             if (Array.isArray(setCookieHeaders)) {
                 for (const setCookie of setCookieHeaders) {
                     cookies.push({
@@ -300,20 +282,12 @@ export class CrawlerOptions extends AutoCastable implements AutoCastableMetaClas
                     ...parseSetCookieString(setCookieHeaders, { decodeValues: false }) as CookieParam,
                 });
             }
-            console.log('Set cookies:', cookies); // Cool
-
-            if (cookies.length > 0) {
-                instance.setCookies = cookies;
-                console.log('Set setCookies:', instance.setCookies);
-            }
 
             const proxyUrl = getHeader('x-proxy-url');
             instance.proxyUrl ??= proxyUrl;
-            console.log('Set proxyUrl:', instance.proxyUrl);
 
             if (instance.cacheTolerance) {
                 instance.cacheTolerance = instance.cacheTolerance * 1000;
-                console.log('Adjusted cacheTolerance:', instance.cacheTolerance);
             }
         }
 

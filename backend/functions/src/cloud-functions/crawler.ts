@@ -9,11 +9,6 @@ import { AsyncContext, CloudHTTPv2, FirebaseStorageBucketControl, Logger, Output
 import _ from 'lodash';
 import { PageSnapshot, PuppeteerControl, ScrappingOptions } from '../services/puppeteer';
 import { Request, Response } from 'express';
-import { CookieParam as PuppeteerCookieParam } from 'puppeteer';
-
-type CookieParam = Omit<PuppeteerCookieParam, 'expires'> & {
-    expires?: number | string;
-};
 const pNormalizeUrl = import("@esm2cjs/normalize-url");
 // import { AltTextService } from '../services/alt-text';
 import TurndownService from 'turndown';
@@ -884,7 +879,7 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
 
         const crawlOpts: ExtraScrappingOptions = {
             proxyUrl: opts.proxyUrl,
-            cookies: this.validateCookies(opts.setCookies),
+            cookies: opts.setCookies,
             favorScreenshot: ['screenshot', 'pageshot'].includes(opts.respondWith),
             removeSelector: opts.removeSelector,
             targetSelector: opts.targetSelector,
@@ -895,56 +890,6 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
         };
 
         return crawlOpts;
-    }
-
-    validateCookies(cookies?: CookieParam[]): PuppeteerCookieParam[] | undefined {
-        if (!cookies) return undefined;
-
-        return cookies.filter(cookie => {
-            if (!cookie.name || !cookie.value) {
-                this.logger.warn(`Invalid cookie: missing name or value`, { cookie });
-                return false;
-            }
-            
-            const validatedCookie: PuppeteerCookieParam = {
-                name: cookie.name,
-                value: cookie.value,
-                domain: cookie.domain,
-                path: cookie.path,
-                expires: cookie.expires ? Number(new Date(cookie.expires)) / 1000 : undefined,
-                httpOnly: cookie.httpOnly,
-                secure: cookie.secure,
-                sameSite: cookie.sameSite as 'Strict' | 'Lax' | 'None' | undefined
-            };
-
-            if (cookie.expires && isNaN(validatedCookie.expires!)) {
-                this.logger.warn(`Invalid cookie: invalid expires date`, { cookie });
-                return false;
-            }
-
-            if (cookie.domain && typeof cookie.domain !== 'string') {
-                this.logger.warn(`Invalid cookie: domain must be a string`, { cookie });
-                return false;
-            }
-            if (cookie.path && typeof cookie.path !== 'string') {
-                this.logger.warn(`Invalid cookie: path must be a string`, { cookie });
-                return false;
-            }
-            if (cookie.secure !== undefined && typeof cookie.secure !== 'boolean') {
-                this.logger.warn(`Invalid cookie: secure must be a boolean`, { cookie });
-                return false;
-            }
-            if (cookie.httpOnly !== undefined && typeof cookie.httpOnly !== 'boolean') {
-                this.logger.warn(`Invalid cookie: httpOnly must be a boolean`, { cookie });
-                return false;
-            }
-            if (cookie.sameSite && !['Strict', 'Lax', 'None'].includes(cookie.sameSite)) {
-                this.logger.warn(`Invalid cookie: sameSite must be 'Strict', 'Lax', or 'None'`, { cookie });
-                return false;
-            }
-
-            return validatedCookie;
-        }) as PuppeteerCookieParam[];
     }
 
     async simpleCrawl(mode: string, url: URL, opts?: ExtraScrappingOptions) {
