@@ -1,5 +1,5 @@
 import {
-    assignTransferProtocolMeta, marshalErrorLike,
+    marshalErrorLike,
     RPCHost, RPCReflection,
     HashManager,
     AssertionFailureError, ParamValidationError, Defer,
@@ -27,6 +27,27 @@ console.log('Initializing CrawlerHost');
 const md5Hasher = new HashManager('md5', 'hex');
 
 // const logger = new Logger('Crawler');
+
+import { TransferProtocolMetadata } from 'civkit';
+
+function sendResponse<T>(res: Response, data: T, meta: TransferProtocolMetadata): T {
+    if (meta.code) {
+        res.status(meta.code);
+    }
+    if (meta.contentType) {
+        res.type(meta.contentType);
+    }
+    if (meta.headers) {
+        for (const [key, value] of Object.entries(meta.headers)) {
+            if (value !== undefined) {
+                res.setHeader(key, value);
+            }
+        }
+    }
+    res.send(data);
+    return data;
+}
+
 
 export interface ExtraScrappingOptions extends ScrappingOptions {
     withIframe?: boolean;
@@ -596,6 +617,8 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
 
     async crawl(req: Request, res: Response) {
         console.log('Crawl method called with request:', req.url);
+        // res.setHeader('Access-Control-Allow-Origin', '*');
+        // res.send('Helloooooooo!');
         // const rpcReflect: RPCReflection = {};
         const ctx = { req, res };
         console.log(`req.headers: ${JSON.stringify(req.headers)}`);
@@ -610,7 +633,7 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
                 return this.getIndex();
             }
 
-            return assignTransferProtocolMeta(`${this.getIndex()}`,
+            return sendResponse(res, `${this.getIndex()}`,
                 { contentType: 'text/plain', envelope: null }
             );
         }
@@ -717,17 +740,17 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
 
             if (crawlerOptions.timeout === undefined) {
                 if (crawlerOptions.respondWith === 'screenshot' && Reflect.get(formatted, 'screenshotUrl')) {
-                    return assignTransferProtocolMeta(`${formatted}`,
+                    return sendResponse(res, `${formatted}`,
                         { code: 302, envelope: null, headers: { Location: Reflect.get(formatted, 'screenshotUrl') } }
                     );
                 }
                 if (crawlerOptions.respondWith === 'pageshot' && Reflect.get(formatted, 'pageshotUrl')) {
-                    return assignTransferProtocolMeta(`${formatted}`,
+                    return sendResponse(res, `${formatted}`,
                         { code: 302, envelope: null, headers: { Location: Reflect.get(formatted, 'pageshotUrl') } }
                     );
                 }
 
-                return assignTransferProtocolMeta(`${formatted}`, { contentType: 'text/plain', envelope: null });
+                return sendResponse(res, `${formatted}`, { contentType: 'text/plain', envelope: null });
             }
         }
 
@@ -737,17 +760,17 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
 
         const formatted = await this.formatSnapshot(crawlerOptions.respondWith, lastScrapped, urlToCrawl);
         if (crawlerOptions.respondWith === 'screenshot' && Reflect.get(formatted, 'screenshotUrl')) {
-            return assignTransferProtocolMeta(`${formatted}`,
+            return sendResponse(res, `${formatted}`,
                 { code: 302, envelope: null, headers: { Location: Reflect.get(formatted, 'screenshotUrl') } }
             );
         }
         if (crawlerOptions.respondWith === 'pageshot' && Reflect.get(formatted, 'pageshotUrl')) {
-            return assignTransferProtocolMeta(`${formatted}`,
+            return sendResponse(res, `${formatted}`,
                 { code: 302, envelope: null, headers: { Location: Reflect.get(formatted, 'pageshotUrl') } }
             );
         }
 
-        return assignTransferProtocolMeta(`${formatted}`, { contentType: 'text/plain', envelope: null });
+        return sendResponse(res, `${formatted}`, { contentType: 'text/plain', envelope: null });
     }
 
     getUrlDigest(urlToCrawl: URL) {
