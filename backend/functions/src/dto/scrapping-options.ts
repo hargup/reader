@@ -195,7 +195,9 @@ export class CrawlerOptions extends AutoCastable {
             res: Response,
         } | undefined;
 
+        console.log(`ctx: ${JSON.stringify(ctx)}`);
         const customMode = ctx?.req.get('x-respond-with') || ctx?.req.get('x-return-format');
+        console.log(`customMode: ${customMode}`);
         if (customMode !== undefined) {
             instance.respondWith = customMode;
         }
