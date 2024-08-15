@@ -401,17 +401,27 @@ export class CrawlerHost extends RPCHost {
             let toBeTurnedToMd = jsDomElementOfHTML;
             let turnDownService = this.getTurndown({ url: snapshot.rebase || nominalUrl, imgDataUrlToObjectUrl });
             if (mode !== 'markdown' && snapshot.parsed?.content) {
+                console.log('Processing parsed content for non-markdown mode');
                 const jsDomElementOfParsed = this.jsdomControl.snippetToElement(snapshot.parsed.content, snapshot.href);
+                console.log('Created jsDomElementOfParsed');
                 const par1 = this.jsdomControl.runTurndown(turnDownService, jsDomElementOfHTML);
+                console.log('Generated par1 from jsDomElementOfHTML');
                 const par2 = snapshot.parsed.content ? this.jsdomControl.runTurndown(turnDownService, jsDomElementOfParsed) : '';
+                console.log('Generated par2 from jsDomElementOfParsed');
 
                 // If Readability did its job
                 if (par2.length >= 0.3 * par1.length) {
+                    console.log('Readability seems to have done its job, adjusting turnDownService');
                     turnDownService = this.getTurndown({ noRules: true, url: snapshot.rebase || nominalUrl, imgDataUrlToObjectUrl });
                     if (snapshot.parsed.content) {
+                        console.log('Using parsed content for toBeTurnedToMd');
                         toBeTurnedToMd = jsDomElementOfParsed;
                     }
+                } else {
+                    console.log('Readability output not sufficient, using original HTML');
                 }
+            } else {
+                console.log('Skipping parsed content processing');
             }
 
             for (const plugin of this.turnDownPlugins) {
@@ -588,6 +598,7 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
         console.log('Crawl method called with request:', req.url);
         // const rpcReflect: RPCReflection = {};
         const ctx = { req, res };
+        console.log(`req.headers: ${JSON.stringify(req.headers)}`);
         const crawlerOptionsHeaderOnly = CrawlerOptionsHeaderOnly.from(req.headers);
         const crawlerOptionsParamsAllowed = CrawlerOptions.from(req.method === 'POST' ? req.body : req.query);
         const noSlashURL = ctx.req.url.slice(1);
