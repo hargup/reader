@@ -674,7 +674,7 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
             });
         }
 
-        const crawlOpts = this.configure(crawlerOptions, req);
+        const crawlOpts = this.configure(crawlerOptions, req, urlToCrawl);
         console.log('Configured crawl options:', crawlOpts);
 
         if (!ctx.req.accepts('text/plain') && ctx.req.accepts('text/event-stream')) {
@@ -865,7 +865,7 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
         }
     }
 
-    configure(opts: CrawlerOptions, req: Request) {
+    configure(opts: CrawlerOptions, req: Request, urlToCrawl: URL) {
 
         this.threadLocal.set('withGeneratedAlt', opts.withGeneratedAlt);
         this.threadLocal.set('withLinksSummary', opts.withLinksSummary);
@@ -881,7 +881,7 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
             (Array.isArray(req.headers['x-set-cookie']) ? req.headers['x-set-cookie'] : [req.headers['x-set-cookie']])
                 .map(cookie => {
                     const [name, value] = cookie.split('=');
-                    return { name, value, url: opts.url || req.query.url as string };
+                    return { name, value, url: urlToCrawl.toString() };
                 })
             : [];
 
