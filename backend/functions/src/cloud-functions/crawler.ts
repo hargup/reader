@@ -879,10 +879,13 @@ ${suffixMixins.length ? `\n${suffixMixins.join('\n\n')}\n` : ''}`;
 
         const cookies = req.headers['x-set-cookie'] ?
             (Array.isArray(req.headers['x-set-cookie']) ? req.headers['x-set-cookie'] : [req.headers['x-set-cookie']])
-                .map(cookie => {
-                    const [name, value] = cookie.split('=');
-                    return { name, value, url: urlToCrawl.toString() };
-                })
+                .flatMap(cookieString =>
+                    cookieString.split(';').map(cookie => {
+                        const [name, ...valueParts] = cookie.trim().split('=');
+                        const value = valueParts.join('=');
+                        return { name, value, url: urlToCrawl.toString() };
+                    })
+                )
             : [];
 
         console.log('Cookies:', cookies);
