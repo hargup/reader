@@ -13,6 +13,16 @@ import { SecurityCompromiseError, ServiceCrashedError } from '../shared/errors';
 import { TimeoutError } from 'puppeteer';
 import tldExtract from 'tld-extract';
 
+// Add this new function for cookie validation
+const validateCookie = (cookie: CookieParam) => {
+    const requiredFields = ['name', 'value', 'domain'];
+    for (const field of requiredFields) {
+        if (!cookie[field]) {
+            throw new Error(`Cookie is missing required field: ${field}`);
+        }
+    }
+};
+
 const READABILITY_JS = fs.readFileSync(require.resolve('@mozilla/readability/Readability.js'), 'utf-8');
 
 
@@ -472,12 +482,24 @@ document.addEventListener('load', handlePageLoad);
         const page = await this.getNextPage();
         const sn = this.snMap.get(page);
         this.logger.info(`Page ${sn}: Scraping ${url}`, { url });
+        
         if (options?.proxyUrl) {
+            this.logger.info(`Page ${sn}: Using proxy:`, options.proxyUrl);
             await page.useProxy(options.proxyUrl);
         }
+        
         if (options?.cookies) {
-            await page.setCookie(...options.cookies);
+            this.logger.info(`Page ${sn}: Attempting to set cookies:`, JSON.stringify(options.cookies, null, 2));
+            try {
+                options.cookies.forEach(validateCookie);
+                await page.setCookie(...options.cookies);
+            } catch (error) {
+                this.logger.error(`Page ${sn}: Error setting cookies:`, error);
+                this.logger.info(`Page ${sn}: Problematic cookies:`, JSON.stringify(options.cookies, null, 2));
+                throw error;
+            }
         }
+        
         if (options?.overrideUserAgent) {
             await page.setUserAgent(options.overrideUserAgent);
         }
