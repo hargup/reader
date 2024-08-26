@@ -591,8 +591,30 @@ document.addEventListener('load', handlePageLoad);
                     );
                 }
             });
+
+        try {
+            console.log('Waiting for Sign Out link');
+            await page.waitForSelector('a[href="/signout"]', { timeout: 10000 });
+            console.log('Sign Out link found');
+        } catch (error) {
+            this.logger.warn(`Timed out waiting for Sign Out link: ${error}`);
+        }
+
+        try {
+            console.log('Clicking on #getOwnerDetails');
+            await page.click('#getOwnerDetails');
+            console.log('Clicked on #getOwnerDetails');
+
+            // console.log('Waiting for Phone No span to appear');
+            // await page.waitForSelector('span:contains("Phone No :")', { timeout: 10000 });
+            // console.log('Phone No span appeared');
+        } catch (error) {
+            this.logger.warn(`Error during click or wait operation: ${error}`);
+        }
+
         let waitForPromise: Promise<any> | undefined;
         if (options?.waitForSelector) {
+            console.log('Waiting for selector', options.waitForSelector);
             const t0 = Date.now();
             waitForPromise = nextSnapshotDeferred.promise.then(() => {
                 const t1 = Date.now();
