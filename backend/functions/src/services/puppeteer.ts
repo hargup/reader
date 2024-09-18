@@ -15,7 +15,7 @@ import tldExtract from 'tld-extract';
 
 // Add this new function for cookie validation
 const validateCookie = (cookie: CookieParam) => {
-    const requiredFields = ['name', 'value', 'domain'];
+    const requiredFields = ['name', 'value'];
     for (const field of requiredFields) {
         if (!cookie[field]) {
             throw new Error(`Cookie is missing required field: ${field}`);
@@ -482,12 +482,12 @@ document.addEventListener('load', handlePageLoad);
         const page = await this.getNextPage();
         const sn = this.snMap.get(page);
         this.logger.info(`Page ${sn}: Scraping ${url}`, { url });
-        
+
         if (options?.proxyUrl) {
             this.logger.info(`Page ${sn}: Using proxy:`, options.proxyUrl);
             await page.useProxy(options.proxyUrl);
         }
-        
+
         if (options?.cookies) {
             this.logger.info(`Page ${sn}: Attempting to set cookies:`, JSON.stringify(options.cookies, null, 2));
             try {
@@ -499,7 +499,7 @@ document.addEventListener('load', handlePageLoad);
                 throw error;
             }
         }
-        
+
         if (options?.overrideUserAgent) {
             await page.setUserAgent(options.overrideUserAgent);
         }
@@ -613,26 +613,6 @@ document.addEventListener('load', handlePageLoad);
                     );
                 }
             });
-
-        try {
-            console.log('Waiting for Sign Out link');
-            await page.waitForSelector('a[href="/signout"]', { timeout: 10000 });
-            console.log('Sign Out link found');
-        } catch (error) {
-            this.logger.warn(`Timed out waiting for Sign Out link: ${error}`);
-        }
-
-        try {
-            console.log('Clicking on #getOwnerDetails');
-            await page.click('#getOwnerDetails');
-            console.log('Clicked on #getOwnerDetails');
-
-            // console.log('Waiting for Phone No span to appear');
-            // await page.waitForSelector('span:contains("Phone No :")', { timeout: 10000 });
-            // console.log('Phone No span appeared');
-        } catch (error) {
-            this.logger.warn(`Error during click or wait operation: ${error}`);
-        }
 
         let waitForPromise: Promise<any> | undefined;
         if (options?.waitForSelector) {
